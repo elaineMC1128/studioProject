@@ -12,9 +12,13 @@ const stage = new Konva.Stage({
     height: stageHeight
 });
 
-// create a layer
+// create a layer for bg, pool, and lines
 const layer = new Konva.Layer();
+// create a layer for fish
+const fishLayer = new Konva.Layer();
+
 stage.add(layer);
+stage.add(fishLayer);
 
 // set background
 const bg = new Konva.Rect({
@@ -89,5 +93,79 @@ for (let j = 0; j <= rows; j++) {
     layer.add(line);
 }
 
+// --------------------
+// bottom area (for fish)
+// --------------------
+const tray = new Konva.Rect({
+    x: 0,
+    y: 560,
+    width: stageWidth,
+    height: 130,
+    fill: "#ffd6f6"
+});
+layer.add(tray);
+
+const trayText = new Konva.Text({
+    x: 0,
+    y: 570,
+    width: stageWidth,
+    text: "Drag fish into the pool",
+    fontSize: 18,
+    fontFamily: "Arial",
+    fill: "#555",
+    align: "center"
+});
+layer.add(trayText);
+
+// 让 Konva 把所有东西渲染出来
 layer.draw();
+// Tips: Konva 是“先添加，再统一绘制”的
+
+// --------------------
+// Fish images (use array to manage the images and data)
+// --------------------
+const fishData = [
+    { src: "assets/images/clownfish.png", x: 50, y: 600, width: 100, height: 100 },
+    { src: "assets/images/hairtail.png", x: 240, y: 600, width: 100, height: 100 },
+    { src: "assets/images/sea urchin.png", x: 455, y: 600, width: 90, height: 90 },
+    { src: "assets/images/star fish.png", x: 662.5, y: 615, width: 65, height: 60 },
+    { src: "assets/images/puffer.png", x: 850, y: 615, width: 80, height: 70 },
+    { src: "assets/images/tropical fish.png", x: 1050, y: 615, width: 70, height: 65 },
+    { src: "assets/images/sacabambaspis.png", x: 1255, y: 615, width: 70, height: 70 },
+];
+
+// 加载所有鱼 load all fish
+fishData.forEach((fish) => {
+    addFishImage(fish.src, fish.x, fish.y, fish.width, fish.height);
+});
+
+// --------------------
+// 函数：添加鱼图片
+// --------------------
+function addFishImage(src, x, y, width, height) {
+    const imageObj = new Image(); // Create a native browser image object
+
+    // Wait until the image has finished loading before creating the Konva image
+    imageObj.onload = function () {
+        const fishImage = new Konva.Image({
+            x: x,
+            y: y,
+            image: imageObj,
+            width: width,
+            height: height,
+            draggable: true
+        });
+
+        // 拖拽开始时把鱼移到最上层
+        fishImage.on("dragstart", function () {
+            fishImage.moveToTop();
+            fishLayer.draw();
+        });
+
+        fishLayer.add(fishImage);
+        fishLayer.draw();
+    };
+
+    imageObj.src = src;
+}
 
