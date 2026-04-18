@@ -4,16 +4,18 @@
     padding: 0;
 }
 
-
 body {
-    width: 100%; height: 100%; overflow: hidden;
-    position: relative;
     background-image: url("assets/images/wavePattern.webp");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
+    background-size: cover;       /* 铺满屏幕 */
+    background-position: center;  /* 居中 */
+    background-repeat: no-repeat; /* 不重复 */
+    background-attachment: fixed; /* 滚动时固定（可选） */
+
     font-family: "Gill Sans", sans-serif;
+}
+
+html, body {
+    overflow-x: hidden;
 }
 
 /* 半透明遮罩 */
@@ -22,111 +24,28 @@ body::before {
     position: fixed;
     inset: 0;
 
-    background: rgba(204, 245, 241, 0.8);
+    background: rgba(201, 230, 245, 0.9);
     /* ↑ 数值越大 = 越淡 */
+    backdrop-filter: blur(2px);
 
     z-index: -1;
 }
 
 main {
-    width: 100%;
-    padding: 18px 0 0;
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 18px 20px 30px;
     text-align: center;
 }
 
 h1 {
     margin-bottom: 12px;
-    font-size: 1.7rem;
-    font-family: "Gill Sans", sans-serif;
+    font-size: 2.2rem;
     color: #2f2f2f;
 }
 
-/* 整个主界面 */
-.app-container {
-    display: flex;
-    align-items: stretch;
-    gap: 18px;
-    padding: 18px 22px 12px 22px;
-    height: calc(100vh - 148px);
-}
-
-/* 左侧控制区 */
-.left-panel {
-    width: 160px;
-    min-width: 160px;
-    border-radius: 20px;
-}
-
-/* 右侧 pool 区 */
-.pool-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    min-width: 0;
-    height: 100%;
-}
-
-.pool-title-bar {
-    padding: 0 4px;
-}
-
-.pool-body {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    border-radius: 0;
-    border: none;
-    background: transparent;
-}
-
-#sequencerStage {
+#container {
     width: 100%;
-    height: 100%;
-}
-
-/* 底部沙地 */
-.shore-area {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 3;
-}
-
-.shore-water-line {
-    height: 10px;
-    background: linear-gradient(to bottom, rgba(126,200,227,0.9), rgba(126,200,227,0.35));
-}
-
-.fish-tray {
-    background: linear-gradient(to bottom, #f5e8a0, #f2d98a);
-    padding: 18px 20px 18px;
-}
-
-.sand-bar {
-    height: 50px;
-    background: linear-gradient(to bottom, #f2d98a, #e6c55a);
-}
-
-/*.tray-label {*/
-/*    display: flex;*/
-/*    align-items: flex-start;*/
-/*    justify-content: flex-start;*/
-/*    margin-top: 10px;*/
-/*}*/
-
-.fish-shelf {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-around;
-    gap: 20px;
-    width: 100%;
-}
-
-.fish-item {
-    height: 58px;
-    width: auto;
-    object-fit: contain;
-    display: block;
+    max-width: 1400px;
+    margin: 0 auto;
 }

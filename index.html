@@ -1,54 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pool Sequencer</title>
+
     <script src="https://unpkg.com/konva@9/konva.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.js"></script>
-
-    <title>Pool Sequencer</title>
     <script src="main.js" defer></script>
+
     <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-<!--主界面-->
-<div class="app-container">
-    <div class="left-panel">
-        <div id="fanWrap"></div>
-        <div id="control2"></div>
-        <div id="sliderArea"></div>
-    </div>
-
-    <div class="pool-section">
-        <div class="pool-title-bar">
-            <span class="pool-title">Pool Sequencer</span>
-        </div>
-
-        <div class="pool-body">
-            <div id="sequencerStage"></div>
-        </div>
-    </div>
-</div>
-
-<!--底部沙地-->
-<div class="shore-area">
-    <div class="shore-water-line"></div>
-    <div class="fish-tray">
-<!--        <div class="tray-label">Drag fish into the pool</div>-->
-        <div class="fish-shelf" id="fishShelf">
-            <img class="fish-item" src="assets/images/clownfish.png" alt="clownfish">
-            <img class="fish-item" src="assets/images/hairtail.png" alt="hairtail">
-            <img class="fish-item" src="assets/images/sea urchin.png" alt="sea urchin">
-            <img class="fish-item" src="assets/images/star fish.png" alt="starfish">
-            <img class="fish-item" src="assets/images/puffer.png" alt="puffer">
-            <img class="fish-item" src="assets/images/tropical fish.png" alt="tropical fish">
-            <img class="fish-item" src="assets/images/sacabambaspis.png" alt="sacabambaspis">
-        </div>
-    </div>
-    <div class="sand-bar"></div>
-</div>
+<main>
+    <h1>Pool Sequencer</h1>
+    <div id="container"></div>
+</main>
 </body>
-
 </html>
