@@ -23,13 +23,28 @@ stage.add(fishLayer);
 // Used to store all fish objects
 const fishes = [];
 
+// Enter the information for each row
+const horizontalLines = [];
+
+const notes = ["C4", "D4", "E4", "G4", "A4", "C5", "D5", "E5", "G5"];
+
+//Create a musical instrument that can produce sound
+const synth = new Tone.Synth().toDestination();
+
+window.addEventListener("click", async function () {
+    await Tone.start();
+    synth.triggerAttackRelease("C4", "8n"); // Pitch and Note duration
+    console.log("sound played");  //check
+}, { once: true });
+
+
 // set background
 const bg = new Konva.Rect({
     x: 0,  // draw from the left bottom corner
     y: 0,
     width: stageWidth,
     height: stageHeight,
-    fill: "#E4FFFC"
+    fill: "#f3f5f6"
 });
 layer.add(bg);
 
@@ -39,7 +54,7 @@ const pool = {
     y: 50,
     width: 1000,
     height: 470,
-    cornerRadius: 24
+    cornerRadius: 25
 };
 
 // create a pool
@@ -49,7 +64,13 @@ const poolRect = new Konva.Rect({
     width: pool.width,
     height: pool.height,
     fill: "#74d5dd",
-    cornerRadius: pool.cornerRadius
+    cornerRadius: pool.cornerRadius,
+
+    // 阴影（重点）
+    shadowColor: "rgba(0,0,0,0.5)",
+    shadowBlur: 20,
+    shadowOffset: { x: 0, y: 20 },
+    shadowOpacity: 0.3
 });
 layer.add(poolRect);
 
@@ -70,12 +91,12 @@ const rows = 5; // rows numbers
 const cellW = pool.width / cols;  // cellwith
 const cellH = pool.height / rows;  // cellheight
 
-// 竖线
-for (let i = 0; i <= cols; i++) { //loop statement 循环语句
+// 竖线 column
+for (let i = 1; i < cols; i++) { //loop statement 循环语句
     const x = pool.x + i * cellW;
 
     const line = new Konva.Line({
-        points: [x, pool.y, x, pool.y + pool.height], // draw the line from(x, pool.y) to(x, pool.y+pool.height)
+        points: [x, pool.y+12, x, pool.y + pool.height-12], // draw the line from(x, pool.y) to(x, pool.y+pool.height)
         stroke: "#E4FFFC",
         strokeWidth: 2
     });
@@ -83,18 +104,27 @@ for (let i = 0; i <= cols; i++) { //loop statement 循环语句
     layer.add(line);
 }
 
-// 横线
-for (let j = 0; j <= rows; j++) {
+// 横线 row
+for (let j = 1; j < rows; j++) {
     const y = pool.y + j * cellH;
 
     const line = new Konva.Line({
-        points: [pool.x, y, pool.x + pool.width, y],
+        points: [pool.x+12, y, pool.x + pool.width-12, y],
         stroke: "#E4FFFC",
         strokeWidth: 2
     });
 
     layer.add(line);
+
+    // Assign a note
+    const note = notes[j % notes.length];
+
+    horizontalLines.push({
+        y: y,
+        note: note
+    });
 }
+console.log(horizontalLines);
 
 // --------------------
 // bottom area (for fish)
@@ -104,7 +134,12 @@ const tray = new Konva.Rect({
     y: 560,
     width: stageWidth,
     height: 130,
-    fill: "#bfe1da"
+    fill: "#bfe1da",
+
+    shadowColor: "rgba(0,0,0,0.18)",
+    shadowBlur: 12,
+    shadowOffset: { x: 0, y: 6 },
+    shadowOpacity: 0.25
 });
 layer.add(tray);
 
@@ -128,24 +163,80 @@ layer.draw();
 // Fish images (use array to manage the images and data)
 // --------------------
 const fishData = [
-    { src: "assets/images/clownfish.png", x: 50, y: 600, width: 100, height: 100, speed: 1.5 },
-    { src: "assets/images/hairtail.png", x: 240, y: 600, width: 100, height: 100, speed: 4},
-    { src: "assets/images/sea urchin.png", x: 455, y: 600, width: 90, height: 90, speed: 0.5 },
-    { src: "assets/images/star fish.png", x: 662.5, y: 615, width: 65, height: 60, speed: 0.1 },
-    { src: "assets/images/puffer.png", x: 850, y: 615, width: 80, height: 70, speed: 1.0 },
-    { src: "assets/images/tropical fish.png", x: 1050, y: 615, width: 70, height: 65, speed: 1.5 },
-    { src: "assets/images/sacabambaspis.png", x: 1255, y: 615, width: 70, height: 70, speed: 1.3 },
+    {
+        src: "assets/images/clownfish.png",
+        x: 50,
+        y: 600,
+        width: 100,
+        height: 100,
+        speed: 1.5,
+        melody: ["C5", "E5", "G5", "E5"]
+    },
+    {
+        src: "assets/images/hairtail.png",
+        x: 240,
+        y: 600,
+        width: 100,
+        height: 100,
+        speed: 4,
+        melody: ["E4", "G4", "A4", "G4"]
+    },
+    {
+        src: "assets/images/sea urchin.png",
+        x: 455,
+        y: 600,
+        width: 90,
+        height: 90,
+        speed: 0.5,
+        melody: ["C3", "C3", "G3", "C3"]
+    },
+    {
+        src: "assets/images/star fish.png",
+        x: 662.5,
+        y: 615,
+        width: 65,
+        height: 60,
+        speed: 0.1,
+        melody: ["A3", "C4", "E4", "C4"]
+    },
+    {
+        src: "assets/images/puffer.png",
+        x: 850,
+        y: 615,
+        width: 80,
+        height: 70,
+        speed: 1.0,
+        melody: ["G4", "A4", "C5", "A4"]
+    },
+    {
+        src: "assets/images/tropical fish.png",
+        x: 1050,
+        y: 615,
+        width: 70,
+        height: 65,
+        speed: 1.5,
+        melody: ["D4", "E4", "G4", "E4"]
+    },
+    {
+        src: "assets/images/sacabambaspis.png",
+        x: 1255,
+        y: 615,
+        width: 70,
+        height: 70,
+        speed: 1.3,
+        melody: ["F4", "A4", "G4", "E4"]
+    },
 ];
 
 // 加载所有鱼 load all fish
 fishData.forEach((fish) => {
-    addFishImage(fish.src, fish.x, fish.y, fish.width, fish.height, fish.speed);
+    addFishImage(fish.src, fish.x, fish.y, fish.width, fish.height, fish.speed, fish.melody);
 });
 
 // --------------------
 // 函数：添加鱼图片 Function: add fish image
 // --------------------
-function addFishImage(src, x, y, width, height, speed) {
+function addFishImage(src, x, y, width, height, speed, melody) {
     // this step follow konva web: Drag and Drop - Drag an image
     const imageObj = new Image(); // Create a native browser image object
 
@@ -170,6 +261,19 @@ function addFishImage(src, x, y, width, height, speed) {
 
         // 速度和方向 speed and direction
         fishImage.speed = speed;
+
+        // 记录上一帧中心点 y
+        fishImage.prevCenterY = y + height / 2;
+
+        // 简单冷却，避免连续重复触发
+        fishImage.currentLineCooldown = 0;
+
+        // 碰撞半径（先把鱼近似成圆）
+        fishImage.radius = Math.min(width, height) * 0.35;
+
+        // 这条鱼自己的旋律
+        fishImage.melody = melody;
+        fishImage.melodyIndex = 0;
 
         // 初始随机方向 Initial random direction
         const angle = Math.random() * Math.PI * 2;
@@ -222,6 +326,9 @@ function addFishImage(src, x, y, width, height, speed) {
     };
     // start to load image (find the img file)
     imageObj.src = src;
+
+    console.log("Loaded:", src);
+    console.log("fish melody:", melody);
 }
 
 // --------------------
@@ -235,6 +342,91 @@ function isInsidePool(x, y) {
         y > pool.y &&
         y < pool.y + pool.height
     );
+}
+
+function checkHorizontalLineCrossing(fish) {
+    const currentCenterY = fish.y() + fish.height() / 2;
+    const previousCenterY = fish.prevCenterY;
+
+    if (fish.currentLineCooldown > 0) {
+        fish.currentLineCooldown--;
+    }
+
+    horizontalLines.forEach((line) => {
+        const lineY = line.y;
+
+        const crossedDown =
+            previousCenterY < lineY && currentCenterY >= lineY;
+
+        const crossedUp =
+            previousCenterY > lineY && currentCenterY <= lineY;
+
+        if ((crossedDown || crossedUp) && fish.currentLineCooldown === 0) {
+            const note = fish.melody[fish.melodyIndex];
+            synth.triggerAttackRelease(note, "8n");
+
+            console.log("fish melody note:", note);
+
+            // melodyIndex 往后移一格
+            fish.melodyIndex = (fish.melodyIndex + 1) % fish.melody.length;
+            fish.currentLineCooldown = 10;
+        }
+    });
+
+    fish.prevCenterY = currentCenterY;
+}
+
+function getFishCenter(fish) {
+    return {
+        x: fish.x() + fish.width() / 2,
+        y: fish.y() + fish.height() / 2
+    };
+}
+
+function handleFishCollisions() {
+    for (let i = 0; i < fishes.length; i++) {
+        for (let j = i + 1; j < fishes.length; j++) {
+            const fishA = fishes[i];
+            const fishB = fishes[j];
+
+            // 只处理已经在池塘里的鱼
+            if (!fishA.inPool || !fishB.inPool) continue;
+            if (fishA.isDragging() || fishB.isDragging()) continue;
+
+            const centerA = getFishCenter(fishA);
+            const centerB = getFishCenter(fishB);
+
+            const dx = centerB.x - centerA.x;
+            const dy = centerB.y - centerA.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            const minDistance = fishA.radius + fishB.radius;
+
+            // 如果两条鱼碰到了
+            if (distance < minDistance && distance > 0) {
+                // 1. 交换速度方向（简化反弹）
+                const tempDx = fishA.dx;
+                const tempDy = fishA.dy;
+
+                fishA.dx = fishB.dx;
+                fishA.dy = fishB.dy;
+
+                fishB.dx = tempDx;
+                fishB.dy = tempDy;
+
+                // 2. 把它们稍微推开，避免卡在一起
+                const overlap = minDistance - distance;
+                const pushX = (dx / distance) * (overlap / 2);
+                const pushY = (dy / distance) * (overlap / 2);
+
+                fishA.x(fishA.x() - pushX);
+                fishA.y(fishA.y() - pushY);
+
+                fishB.x(fishB.x() + pushX);
+                fishB.y(fishB.y() + pushY);
+            }
+        }
+    }
 }
 
 // --------------------
@@ -272,7 +464,12 @@ const animation = new Konva.Animation(function () {
             fish.y(pool.y + pool.height - fish.height());
             fish.dy *= -1;
         }
+
+        checkHorizontalLineCrossing(fish);
     });
+
+    // 所有鱼移动完后，再处理鱼和鱼之间的碰撞
+    handleFishCollisions();
 }, fishLayer);
 
 animation.start();
