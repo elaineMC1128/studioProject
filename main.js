@@ -285,7 +285,7 @@ fanToggleText.on("click tap", togglePlay);
 // 第二控制器占位
 const restartButton = new Konva.Rect({
     x: 60,
-    y: 370,
+    y: 450,
     width: 80,
     height: 34,
     cornerRadius: 10,
@@ -294,7 +294,7 @@ const restartButton = new Konva.Rect({
 
 const restartText = new Konva.Text({
     x: 65,
-    y: 381,
+    y: 461,
     width: 70,
     text: "Restart",
     align: "center",
@@ -304,7 +304,7 @@ const restartText = new Konva.Text({
 
 const cleanButton = new Konva.Rect({
     x: 200,
-    y: 370,
+    y: 450,
     width: 80,
     height: 34,
     cornerRadius: 10,
@@ -313,7 +313,7 @@ const cleanButton = new Konva.Rect({
 
 const cleanText = new Konva.Text({
     x: 208,
-    y: 380,
+    y: 460,
     width: 64,
     text: "Clean",
     align: "center",
@@ -330,7 +330,7 @@ cleanButton.on("click tap", cleanSequencer);
 cleanText.on("click tap", cleanSequencer);
 
 const sliderTrack = new Konva.Line({
-    points: [95, 480, 250, 480],
+    points: [95, 380, 250, 380],
     stroke: "#d9cfd0",
     strokeWidth: 12,
     lineCap: "round"
@@ -338,7 +338,7 @@ const sliderTrack = new Konva.Line({
 
 const sliderThumb = new Konva.Circle({
     x: 95,
-    y: 480,
+    y: 380,
     radius: 12,
     fill: "#f08a8a",
     draggable: true,
@@ -347,7 +347,7 @@ const sliderThumb = new Konva.Circle({
         const maxX = 250;
         return {
             x: Math.max(minX, Math.min(maxX, pos.x)),
-            y: 480
+            y: 380
         };
     }
 });
@@ -358,7 +358,7 @@ sliderThumb.on("dragmove", function () {
 
 const minusText = new Konva.Text({
     x: 60,
-    y: 466,
+    y: 366,
     text: "-",
     fontSize: 28,
     fill: "#111"
@@ -366,7 +366,7 @@ const minusText = new Konva.Text({
 
 const plusText = new Konva.Text({
     x: 270,
-    y: 468,
+    y: 368,
     text: "+",
     fontSize: 28,
     fill: "#111"
