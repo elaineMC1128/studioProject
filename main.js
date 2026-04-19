@@ -48,45 +48,6 @@ const scanState = {
     stepInterval: 600    // 基础每列间隔（毫秒）
 };
 
-// 创建 synth
-// const synths = {
-//     clownfish: new Tone.Synth({
-//         oscillator: { type: "triangle" },
-//         envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 }
-//     }).toDestination(),
-//
-//     hairtail: new Tone.Synth({
-//         oscillator: { type: "sine" },
-//         envelope: { attack: 0.02, decay: 0.08, sustain: 0.15, release: 0.25 }
-//     }).toDestination(),
-//
-//     seaUrchin: new Tone.Synth({
-//         oscillator: { type: "square" },
-//         envelope: { attack: 0.005, decay: 0.06, sustain: 0.1, release: 0.15 }
-//     }).toDestination(),
-//
-//     starfish: new Tone.Synth({
-//         oscillator: { type: "triangle" },
-//         envelope: { attack: 0.03, decay: 0.12, sustain: 0.18, release: 0.3 }
-//     }).toDestination(),
-//
-//     puffer: new Tone.Synth({
-//         oscillator: { type: "sine" },
-//         envelope: { attack: 0.01, decay: 0.07, sustain: 0.12, release: 0.18 }
-//     }).toDestination(),
-//
-//     tropicalFish: new Tone.Synth({
-//         oscillator: { type: "triangle" },
-//         envelope: { attack: 0.008, decay: 0.09, sustain: 0.18, release: 0.2 }
-//     }).toDestination(),
-//
-//     sacabambaspis: new Tone.Synth({
-//         oscillator: { type: "square" },
-//         envelope: { attack: 0.01, decay: 0.1, sustain: 0.15, release: 0.2 }
-//     }).toDestination()
-// };
-
-
 
 const paletteFish = [
     {
@@ -147,31 +108,53 @@ const paletteFish = [
     }
 ];
 
+// 创建 synth
+const synths = {
+    // 🎣 明亮主旋律（清晰）
+    clownfish: new Tone.Synth({
+        oscillator: { type: "triangle" },
+        envelope: { attack: 0.005, decay: 0.08, sustain: 0.2, release: 0.15 }
+    }).toDestination(),
 
-// sound
-const players = {
-    clownfish: new Tone.Player("assets/sound/ringtone.mp3").toDestination(),
-    hairtail: new Tone.Player("assets/sound/tabla-break-sound.mp3").toDestination(),
-    puffer: new Tone.Player("assets/sound/bubble-pop.mp3").toDestination(),
-    starfish: new Tone.Player("assets/sound/triangle-loops.mp3").toDestination(),
-    seaUrchin: new Tone.Player("assets/sound/da.mp3").toDestination(),
-    tropicalFish: new Tone.Player("assets/sound/marimba.mp3").toDestination(),
-    sacabambaspis: new Tone.Player("assets/sound/xylophone-melody.mp3").toDestination()
+    // 🌊 柔和低频（铺底）
+    hairtail: new Tone.Synth({
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.01, decay: 0.12, sustain: 0.3, release: 0.25 }
+    }).toDestination(),
+
+    // 🟣 短促点击（节奏）
+    seaUrchin: new Tone.Synth({
+        oscillator: { type: "square" },
+        envelope: { attack: 0.001, decay: 0.05, sustain: 0.05, release: 0.05 }
+    }).toDestination(),
+
+    // ⭐ 柔和“水下钟声”
+    starfish: new Tone.Synth({
+        oscillator: { type: "triangle" },
+        envelope: { attack: 0.02, decay: 0.15, sustain: 0.2, release: 0.4 }
+    }).toDestination(),
+
+    // 🐡 圆润 pluck
+    puffer: new Tone.Synth({
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.005, decay: 0.09, sustain: 0.15, release: 0.2 }
+    }).toDestination(),
+
+    // 🐠 明亮但稍短（装饰）
+    tropicalFish: new Tone.Synth({
+        oscillator: { type: "triangle" },
+        envelope: { attack: 0.003, decay: 0.06, sustain: 0.1, release: 0.1 }
+    }).toDestination(),
+
+    // 🦴 有点怪但不刺耳（个性）
+    sacabambaspis: new Tone.Synth({
+        oscillator: { type: "square" },
+        envelope: { attack: 0.005, decay: 0.1, sustain: 0.15, release: 0.2 }
+    }).toDestination()
 };
 
-// 停止所有声音的函数
-function stopAllPlayers() {
-    Object.values(players).forEach((player) => {
-        try {
-            player.stop();
-        } catch (e) {
-            // 忽略停止时的小错误
-        }
-    });
-}
-
 // 定义“行号 → 音高”
-const rowNotes = ["C5", "A4", "G4", "E4", "D4", "C4", "A3", "G3"];
+const rowNotes = ["C5", "G4", "E4", "D4", "C4", "A3", "G3", "E3"];
 
 const placedNotes = [];
 
@@ -517,8 +500,21 @@ function addPaletteFish(fishData) {
         templateFish.fishWidth = fishData.width;
         templateFish.fishHeight = fishData.height;
 
-        // 用户一按下这条模板鱼,就调用一个新函数,生成一条可拖动的新鱼
+        // 鼠标移上去：张开的手 + 轻微放大
+        templateFish.on("mouseenter", function () {
+            stage.container().style.cursor = "grab";
+            enlargeFish(templateFish);
+        });
+
+        // 鼠标离开：恢复默认 + 恢复大小
+        templateFish.on("mouseleave", function () {
+            stage.container().style.cursor = "default";
+            resetFishScale(templateFish);
+        });
+
+        // 按下开始拖复制：抓住的手
         templateFish.on("mousedown touchstart", function () {
+            stage.container().style.cursor = "grabbing";
             createDraggableFishFromTemplate(templateFish);
         });
 
@@ -547,15 +543,46 @@ function createDraggableFishFromTemplate(templateFish) {
     clone.noteId = noteIdCounter++;
     clone.isPlaced = false;
 
+    // hover：张开的手 + 放大
+    clone.on("mouseenter", function () {
+        if (!clone.isDragging()) {
+            stage.container().style.cursor = "grab";
+            enlargeFish(clone);
+        }
+    });
+
+    // 离开：恢复默认 + 恢复大小
+    clone.on("mouseleave", function () {
+        if (!clone.isDragging()) {
+            stage.container().style.cursor = "default";
+            resetFishScale(clone);
+        }
+    });
+
+    // 开始拖：抓住的手 + 保持放大
+    clone.on("dragstart", function () {
+        stage.container().style.cursor = "grabbing";
+        enlargeFish(clone);
+    });
+
+    // 结束拖：如果鼠标还在鱼上，回到 grab；否则 default
+    clone.on("dragend", function () {
+        handleDroppedFish(clone);
+
+        // 如果鱼还存在，就保持 hover 状态
+        if (clone.getStage()) {
+            stage.container().style.cursor = "grab";
+            enlargeFish(clone);
+        }
+    });
+
     noteLayer.add(clone);
     clone.moveToTop();
     noteLayer.draw();
 
     clone.startDrag();
-
-    clone.on("dragend", function () {
-        handleDroppedFish(clone);
-    });
+    stage.container().style.cursor = "grabbing";
+    enlargeFish(clone);
 }
 
 // 判断一个点是不是在 pool grid 里面
@@ -594,7 +621,6 @@ function handleDroppedFish(fish) {
     const centerX = fish.x() + fish.width() / 2;
     const centerY = fish.y() + fish.height() / 2;
 
-    // 先找到这条鱼在 placedNotes 里的旧记录
     const existingIndex = placedNotes.findIndex(
         (note) => note.id === fish.noteId
     );
@@ -620,23 +646,34 @@ function handleDroppedFish(fish) {
         };
 
         if (existingIndex >= 0) {
-            // 已有记录 → 更新
             placedNotes[existingIndex] = noteData;
         } else {
-            // 没有记录 → 新增
             placedNotes.push(noteData);
         }
 
         noteLayer.draw();
+        stage.container().style.cursor = "grab";
     } else {
-        // 如果拖出了 grid
         if (existingIndex >= 0) {
             placedNotes.splice(existingIndex, 1);
         }
 
         fish.destroy();
         noteLayer.draw();
+        stage.container().style.cursor = "default";
     }
+}
+
+// 让鱼放大到 1.08 倍
+function enlargeFish(fish) {
+    fish.scale({ x: 1.08, y: 1.08 });
+    noteLayer.draw();
+}
+
+// 让鱼恢复原大小
+function resetFishScale(fish) {
+    fish.scale({ x: 1, y: 1 });
+    noteLayer.draw();
 }
 
 // 更新扫描列位置的函数（算出这一列应该在 pool 的哪个 x 位置，然后把高亮矩形移过去）
@@ -658,12 +695,11 @@ function triggerColumnNotes(colIndex) {
     placedNotes.forEach((note) => {
         if (note.col !== colIndex) return;
 
-        const fishType = note.fishType;
-        const player = players[fishType];
+        const synth = synths[note.fishType];
+        const pitch = rowNotes[note.row];
 
-        if (player && player.loaded) {
-            player.playbackRate = 1 + (3 - note.row) * 0.05;
-            player.start();
+        if (synth && pitch) {
+            synth.triggerAttackRelease(pitch, "8n");
         }
     });
 }
@@ -701,8 +737,6 @@ function restartSequencer() {
     scanState.currentCol = 0;
     scanState.accumulatedTime = 0;
     fanToggleText.text("▶");
-
-    stopAllPlayers();
 
     scanHighlight.visible(false);
     scanHighlight.x(grid.x);
