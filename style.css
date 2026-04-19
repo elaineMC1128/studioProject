@@ -50,3 +50,59 @@ h1 {
     max-width: 1400px;
     margin: 0 auto;
 }
+
+#intro-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.intro-card {
+    width: min(520px, 90vw);
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 24px;
+    padding: 28px 30px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    text-align: center;
+}
+
+.intro-card h2 {
+    margin-bottom: 14px;
+    font-size: 2rem;
+    color: #222;
+}
+
+.intro-card p {
+    margin-bottom: 12px;
+    line-height: 1.5;
+    color: #444;
+}
+
+
+#enter-button {
+    margin-top: 8px;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 26px;
+    font-size: 1rem;
+    background: #73dfe2;
+    color: #111;
+    cursor: pointer;
+}
+
+#enter-button:hover {
+    filter: brightness(0.97);
+}
+
+#app-shell {
+    visibility: hidden;
+}
+
+#app-shell.active {
+    visibility: visible;
+}

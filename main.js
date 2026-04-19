@@ -158,6 +158,10 @@ const rowNotes = ["C5", "G4", "E4", "D4", "C4", "A3", "G3", "E3"];
 
 const placedNotes = [];
 
+const previewCooldowns = {};
+
+let audioReady = false;
+
 let noteIdCounter = 0;
 
 
@@ -480,6 +484,18 @@ bgLayer.draw();
 uiLayer.draw();
 noteLayer.draw();
 
+const introOverlay = document.getElementById("intro-overlay");
+const enterButton = document.getElementById("enter-button");
+const appShell = document.getElementById("app-shell");
+
+enterButton.addEventListener("click", async function () {
+    await Tone.start();
+    audioReady = true;
+
+    introOverlay.style.display = "none";
+    appShell.classList.add("active");
+});
+
 // --------------------
 // 函数：加入底部鱼模板
 // --------------------
@@ -504,6 +520,7 @@ function addPaletteFish(fishData) {
         templateFish.on("mouseenter", function () {
             stage.container().style.cursor = "grab";
             enlargeFish(templateFish);
+            playFishPreview(templateFish.fishType);
         });
 
         // 鼠标离开：恢复默认 + 恢复大小
@@ -583,6 +600,37 @@ function createDraggableFishFromTemplate(templateFish) {
     clone.startDrag();
     stage.container().style.cursor = "grabbing";
     enlargeFish(clone);
+}
+
+// 播放 demo 的函数
+function playFishPreview(fishType) {
+    if (!audioReady) return;
+
+    // 防止一直 hover 时重复疯狂触发
+    if (previewCooldowns[fishType]) return;
+
+    const synth = synths[fishType];
+    if (!synth) return;
+
+    // 给每种鱼一个固定 demo 音高
+    const previewNotes = {
+        clownfish: "C5",
+        hairtail: "G3",
+        seaUrchin: "E4",
+        starfish: "A4",
+        puffer: "D4",
+        tropicalFish: "G4",
+        sacabambaspis: "C4"
+    };
+
+    const pitch = previewNotes[fishType] || "C4";
+    synth.triggerAttackRelease(pitch, "8n");
+
+    previewCooldowns[fishType] = true;
+
+    setTimeout(() => {
+        previewCooldowns[fishType] = false;
+    }, 250);
 }
 
 // 判断一个点是不是在 pool grid 里面
@@ -710,8 +758,9 @@ function triggerColumnNotes(colIndex) {
 async function togglePlay() {
     const wasPlaying = scanState.isPlaying;
 
-    if (!wasPlaying) {
+    if (!audioReady) {
         await Tone.start();
+        audioReady = true;
     }
 
     scanState.isPlaying = !scanState.isPlaying;
@@ -723,8 +772,6 @@ async function togglePlay() {
         if (!wasPlaying) {
             triggerColumnNotes(scanState.currentCol);
         }
-    } else {
-        stopAllPlayers();
     }
 
     fanToggleText.text(scanState.isPlaying ? "⏸" : "▶");
