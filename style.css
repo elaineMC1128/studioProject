@@ -4,12 +4,16 @@
     padding: 0;
 }
 
+/*
+  The page background sets up the aquatic mood of the project before any interaction begins.
+  I used a full-screen wave pattern instead of a flat background colour so the tool feels like a small world, not just an interface panel. This helps support the fish-pool metaphor and gives the prototype a more distinctive character.
+*/
 body {
     background-image: url("assets/images/wavePattern.webp");
-    background-size: cover;       /* 铺满屏幕 */
-    background-position: center;  /* 居中 */
-    background-repeat: no-repeat; /* 不重复 */
-    background-attachment: fixed; /* 滚动时固定（可选） */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
 
     font-family: "Gill Sans", sans-serif;
 }
@@ -18,14 +22,17 @@ html, body {
     overflow-x: hidden;
 }
 
-/* 半透明遮罩 */
+/* Translucent Mask */
+/*
+    The translucent overlay softens the background image so the main interface stays readable.
+    I chose to tint and blur the page slightly because the background should contribute to atmosphere without competing too strongly with the sequencer itself. The result is a softer visual field that still keeps the underwater feeling present.
+*/
 body::before {
     content: "";
     position: fixed;
     inset: 0;
 
     background: rgba(201, 230, 245, 0.9);
-    /* ↑ 数值越大 = 越淡 */
     backdrop-filter: blur(2px);
 
     z-index: -1;
@@ -97,12 +104,4 @@ h1 {
 
 #enter-button:hover {
     filter: brightness(0.97);
-}
-
-#app-shell {
-    visibility: hidden;
-}
-
-#app-shell.active {
-    visibility: visible;
 }

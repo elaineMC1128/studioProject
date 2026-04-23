@@ -14,8 +14,13 @@
     <link rel="icon" type="image/png" href="./assets/images/favicon.png" />
 </head>
 
-<body>
 
+<body>
+<!--
+  The intro overlay works as a simple onboarding moment before the user enters the sequencer.
+  I added this because the project uses a playful metaphor instead of a conventional music interface, so the user may not immediately understand that fish act as notes and the pool acts as a sequencing space. Additionally, I included a hint about the fan feature.
+  Showing a short explanation first helps frame the interaction, reduce first-use confusion, and make entry into the tool feel deliberate.
+-->
 <div id="intro-overlay">
     <div class="intro-card">
         <h2>Pool Sequencer</h2>
@@ -28,6 +33,10 @@
     </div>
 </div>
 
+<!--
+  The main section keeps the visible interface simple: a title and one container for the interactive system.
+  I kept the HTML structure minimal because most of the project’s visual behaviour is generated dynamically in JavaScript.
+-->
 <main>
     <h1>Pool Sequencer</h1>
     <div id="container"></div>
