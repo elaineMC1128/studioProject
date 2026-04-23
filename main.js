@@ -365,7 +365,7 @@ const sliderThumb = new Konva.Circle({
     }
 });
 
-sliderThumb.on("dragmove", function () {
+sliderThumb.on("drag move", function () {
     updateSpeedFromSlider();
 });
 
@@ -390,16 +390,16 @@ uiLayer.add(sliderTrack, sliderThumb, minusText, plusText);
 // --------------------
 // Pool
 // --------------------
-const poolShadow = new Konva.Rect({
-    x: grid.x,
-    y: grid.y + 10,
-    width: grid.width,
-    height: grid.height,
-    cornerRadius: 18,
-    fill: "rgba(0,0,0,0.12)",
-    blurRadius: 10
-});
-bgLayer.add(poolShadow);
+// const poolShadow = new Konva.Rect({
+//     x: grid.x,
+//     y: grid.y + 10,
+//     width: grid.width,
+//     height: grid.height,
+//     cornerRadius: 18,
+//     fill: "rgba(0,0,0,0.12)",
+//     blurRadius: 10
+// });
+// bgLayer.add(poolShadow);
 
 const poolBorder = new Konva.Rect({
     x: grid.x - 10,
