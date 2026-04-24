@@ -2,8 +2,8 @@ const introOverlay = document.getElementById("intro-overlay");
 const enterButton = document.getElementById("enter-button");
 
 /*
-  These layout values define the overall structure of the stage.
-  I kept them grouped at the top so the visual proportions of the project can be adjusted more easily while developing.
+These layout values define the overall structure of the stage.
+I kept them grouped at the top so the visual proportions of the project can be adjusted more easily while developing.
 */
 const layout = {
     marginTop: 70,
@@ -37,8 +37,8 @@ stage.add(uiLayer);
 stage.add(noteLayer);
 
 /*
-  The grid is the core sequencing space of the project.
-  Instead of using a conventional DAW timeline, I translate sequencing into a pool made of cells, so placement becomes a spatial decision. This supports the project's mapping idea: where the fish is placed changes how and when it sounds.
+The grid is the core sequencing space of the project.
+Instead of using a conventional DAW timeline, I translate sequencing into a pool made of cells, so placement becomes a spatial decision. This supports the project's mapping idea: where the fish is placed changes how and when it sounds.
 */
 
 // Defining a 7x5 grid
@@ -167,9 +167,9 @@ const synths = {
 const rowNotes = ["C5", "G4", "E4", "D4", "C4", "A3", "G3", "E3"];
 
 /*
-  placedNotes is the memory of the composition.
-  It stores which fish have been placed, where they are, and which stage object they belong to.
-  It makes the arrangement becomes a repeatable sequence.
+placedNotes is the memory of the composition.
+It stores which fish have been placed, where they are, and which stage object they belong to.
+It makes the arrangement becomes a repeatable sequence.
 */
 const placedNotes = [];
 
@@ -183,6 +183,13 @@ let noteIdCounter = 0;
 // --------------------
 // left control area
 // --------------------
+
+/*
+I used the fan as the main playback control because I wanted to use the wind to affect the speed of the "waves",
+so I chose the fan as a representative of the wind force,
+and the rotation of the fan blades can also visually connect with the speed of the waves,
+making the rhythm and movement feel more specific, interesting and intuitive.
+*/
 const controlPanel = new Konva.Group({
     x: 90,
     y: 150
@@ -390,16 +397,6 @@ uiLayer.add(sliderTrack, sliderThumb, minusText, plusText);
 // --------------------
 // Pool
 // --------------------
-// const poolShadow = new Konva.Rect({
-//     x: grid.x,
-//     y: grid.y + 10,
-//     width: grid.width,
-//     height: grid.height,
-//     cornerRadius: 18,
-//     fill: "rgba(0,0,0,0.12)",
-//     blurRadius: 10
-// });
-// bgLayer.add(poolShadow);
 
 const poolBorder = new Konva.Rect({
     x: grid.x - 10,
@@ -558,11 +555,9 @@ function addPaletteFish(fishData) {
     imageObj.src = fishData.src;
 }
 
-/*
-  Instead of dragging the original palette fish away, the system creates a clone.
-  I chose this because the bottom tray should stay available as a reusable set of musical materials.
-  The clone then becomes the active object the user composes with, which keeps the interaction clear and repeatable.
-*/
+// Instead of dragging the original palette fish away, the system creates a clone.
+// I chose this because the bottom tray should stay available as a reusable set of musical materials.
+// The clone then becomes the active object the user composes with, which keeps the interaction clear and repeatable.
 function createDraggableFishFromTemplate(templateFish) {
     const clone = new Konva.Image({
         x: templateFish.x(),
@@ -749,9 +744,9 @@ function resetFishScale(fish) {
 }
 
 /*
-  The scan functions move the playback wave across the grid and trigger notes column by column.
-  This is where the arrangement becomes time-based output.
-  I separated highlight updates, scan movement, and note triggering into different functions so the visual reading system and the audio logic can stay coordinated but still be adjusted independently later.
+The scan functions move the playback wave across the grid and trigger notes column by column.
+This is where the arrangement becomes time-based output.
+I separated highlight updates, scan movement, and note triggering into different functions so the visual reading system and the audio logic can stay coordinated but still be adjusted independently later.
 */
 // Update the function of the scan column position (figure out where the column should be in the pool x, and move the highlighted rectangle over)
 function updateScanHighlight() {
