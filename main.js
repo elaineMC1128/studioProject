@@ -13,16 +13,43 @@ const layout = {
     gap: 20
 };
 
-
 const stageWidth = 1400;
 const stageHeight = 697;
 
 // create a stage
 const stage = new Konva.Stage({
-    container: "container",
+    container: "container", // id of container <div>
     width: stageWidth,
     height: stageHeight
 });
+
+// 窗口响应式
+function fitStageIntoContainer() {
+    const container = document.getElementById("container");
+    const containerWidth = container.clientWidth;
+
+    const scale = Math.min(containerWidth / stageWidth, 1);
+
+    stage.width(stageWidth * scale);
+    stage.height(stageHeight * scale);
+    stage.scale({ x: scale, y: scale });
+}
+
+const paletteShadowBaselineY = 680;
+
+function createPaletteShadow(fishData) {
+    return new Konva.Ellipse({
+        x: fishData.x + fishData.width / 2,
+        y: paletteShadowBaselineY,
+        radiusX: 30,
+        radiusY: 8,
+        fill: "rgba(0, 0, 0, 0.16)",
+        listening: false
+    });
+}
+
+fitStageIntoContainer();
+window.addEventListener("resize", fitStageIntoContainer);
 
 // Create Layers
 // Draw a static pond grid and scan highlight rectangles
@@ -36,23 +63,9 @@ stage.add(bgLayer);
 stage.add(uiLayer);
 stage.add(noteLayer);
 
-/*
-  The grid is the core sequencing space of the project.
-  Instead of using a conventional DAW timeline, I translate sequencing into a pool made of cells, so placement becomes a spatial decision. This supports the project's mapping idea: where the fish is placed changes how and when it sounds.
-*/
 
-// Defining a 7x5 grid
-const grid = {
-    cols: 7,
-    rows: 5,
-    x: 380,
-    y: 40,
-    width: 900,
-    height: 460
-};
 
-grid.cellW = grid.width / grid.cols;
-grid.cellH = grid.height / grid.rows;
+
 
 // store the moving playback state of the sequencer
 // I use an accumulatedTime logic to allow smooth speed transitions via the fan controller.
@@ -85,23 +98,23 @@ const paletteFish = [
     {
         type: "seaUrchin",
         src: "assets/images/sea urchin.png",
-        x: 460,
+        x: 465,
         y: 593,
-        width: 90,
-        height: 90
+        width: 85,
+        height: 85
     },
     {
         type: "starfish",
         src: "assets/images/star fish.png",
-        x: 660,
-        y: 610,
+        x: 665,
+        y: 605,
         width: 65,
         height: 60
     },
     {
         type: "puffer",
         src: "assets/images/puffer.png",
-        x: 855,
+        x: 860,
         y: 610,
         width: 70,
         height: 60
@@ -109,7 +122,7 @@ const paletteFish = [
     {
         type: "tropicalFish",
         src: "assets/images/tropical fish.png",
-        x: 1050,
+        x: 1055,
         y: 610,
         width: 65,
         height: 60
@@ -117,7 +130,7 @@ const paletteFish = [
     {
         type: "sacabambaspis",
         src: "assets/images/sacabambaspis.png",
-        x: 1240,
+        x: 1245,
         y: 610,
         width: 65,
         height: 65
@@ -181,14 +194,16 @@ let noteIdCounter = 0;
 
 
 // --------------------
-// left control area
+// left control area 开始画左边的控制区
 // --------------------
+
+// 创建一个组，用来放fan的所有shape
 const controlPanel = new Konva.Group({
-    x: 90,
-    y: 150
+    x: 98,
+    y: 80
 });
 
-// fan outer
+// fan outer 风扇外圈
 const fanOuter = new Konva.Circle({
     x: 80,
     y: 80,
@@ -198,7 +213,7 @@ const fanOuter = new Konva.Circle({
     strokeWidth: 4
 });
 
-// fan ring
+// fan ring 风扇内圈
 const fanRing = new Konva.Circle({
     x: 80,
     y: 80,
@@ -227,7 +242,7 @@ for (let i = 0; i < 3; i++) {
         strokeWidth: 3,
         rotation: i * 120
     });
-
+    // add the three blades to blade group
     fanBladeGroup.add(blade);
 }
 
@@ -274,6 +289,7 @@ const fanToggleText = new Konva.Text({
     listening: false
 });
 
+// add all shapes of the fan to the fan group
 controlPanel.add(
     fanOuter,
     fanRing,
@@ -284,7 +300,9 @@ controlPanel.add(
     fanToggleText
 );
 
+// add the fan group to the control layer
 uiLayer.add(controlPanel);
+
 
 fanOuter.on("click tap", togglePlay);
 fanRing.on("click tap", togglePlay);
@@ -292,43 +310,45 @@ fanCenter.on("click tap", togglePlay);
 fanBladeGroup.on("click tap", togglePlay);
 fanToggleText.on("click tap", togglePlay);
 
-// create restart button
-const restartButton = new Konva.Rect({
-    x: 60,
-    y: 450,
-    width: 80,
-    height: 34,
-    cornerRadius: 10,
-    fill: "#f48c8c"
-});
-
-const restartText = new Konva.Text({
-    x: 65,
-    y: 461,
-    width: 70,
-    text: "Restart",
-    align: "center",
-    fontSize: 14,
-    fill: "#111"
-});
-
 // create clean button
 const cleanButton = new Konva.Rect({
-    x: 200,
-    y: 450,
-    width: 80,
+    x: 125,
+    y: 400,
+    width: 110,
     height: 34,
     cornerRadius: 10,
     fill: "#6de29f"
 });
 
 const cleanText = new Konva.Text({
-    x: 208,
-    y: 460,
+    x: 148,
+    y: 411,
     width: 64,
     text: "Clean",
     align: "center",
     fontSize: 14,
+    fontFamily: "Gill Sans",
+    fill: "#111"
+});
+
+// create restart button
+const restartButton = new Konva.Rect({
+    x: 125,
+    y: 460,
+    width: 110,
+    height: 34,
+    cornerRadius: 10,
+    fill: "#f48c8c"
+});
+
+const restartText = new Konva.Text({
+    x: 145,
+    y: 470,
+    width: 70,
+    text: "Restart",
+    align: "center",
+    fontSize: 14,
+    fontFamily: "Gill Sans",
     fill: "#111"
 });
 
@@ -341,12 +361,48 @@ restartText.on("click tap", restartSequencer);
 cleanButton.on("click tap", cleanSequencer);
 cleanText.on("click tap", cleanSequencer);
 
+
+// create slide group
+const slideGroup = new Konva.Group({
+    x: 7,
+    y: -55
+})
+
 // create the slider
 const sliderTrack = new Konva.Line({
     points: [95, 380, 250, 380],
     stroke: "#d9cfd0",
     strokeWidth: 12,
     lineCap: "round"
+});
+
+const speedText = new Konva.Text({
+    x: 95,
+    y: 350,
+    width: 155,
+    text: "Speed",
+    align: "center",
+    fontSize: 14,
+    fontFamily: "Gill Sans",
+    fill: "#333"
+});
+
+const slowText = new Konva.Text({
+    x: 80,
+    y: 405,
+    text: "Slow",
+    fontSize: 13,
+    fontFamily: "Gill Sans",
+    fill: "#555"
+});
+
+const fastText = new Konva.Text({
+    x: 242,
+    y: 405,
+    text: "Fast",
+    fontSize: 13,
+    fontFamily: "Gill Sans",
+    fill: "#555"
 });
 
 const sliderThumb = new Konva.Circle({
@@ -360,7 +416,7 @@ const sliderThumb = new Konva.Circle({
         const maxX = 250;
         return {
             x: Math.max(minX, Math.min(maxX, pos.x)),
-            y: 380
+            y: 325
         };
     }
 });
@@ -385,11 +441,32 @@ const plusText = new Konva.Text({
     fill: "#111"
 });
 
-uiLayer.add(sliderTrack, sliderThumb, minusText, plusText);
+slideGroup.add(
+    speedText, sliderTrack, sliderThumb, minusText, plusText, slowText, fastText
+);
 
+uiLayer.add(slideGroup);
 // --------------------
 // Pool
 // --------------------
+/*
+  The grid is the core sequencing space of the project.
+  Instead of using a conventional DAW timeline, I translate sequencing into a pool made of cells, so placement becomes a spatial decision. This supports the project's mapping idea: where the fish is placed changes how and when it sounds.
+*/
+
+// Defining a 7x5 grid
+const grid = {
+    cols: 7,
+    rows: 6,
+    x: 420,
+    y: 5,
+    width: 900,
+    height: 510
+};
+
+grid.cellW = grid.width / grid.cols;
+grid.cellH = grid.height / grid.rows;
+
 const poolShadow = new Konva.Rect({
     x: grid.x,
     y: grid.y + 10,
@@ -469,14 +546,73 @@ scanHighlight.moveToTop();
 // --------------------
 // palette area (for storing the fish)
 // --------------------
+const beachY = 560;
+const beachHeight = stageHeight - beachY;
+
+// 沙滩底色
 const paletteArea = new Konva.Rect({
     x: 0,
-    y: 560,
+    y: beachY,
     width: stageWidth,
-    height: 137,
+    height: beachHeight,
     fill: "#ead8a6"
 });
 bgLayer.add(paletteArea);
+
+// 沙滩顶部的波浪边缘
+const beachWavePoints = [];
+beachWavePoints.push(0, beachY);
+
+for (let x = 0; x <= stageWidth; x += 28) {
+    const waveY = beachY + Math.sin(x * 0.035) * 5 + Math.sin(x * 0.011) * 3;
+    beachWavePoints.push(x, waveY);
+}
+
+beachWavePoints.push(stageWidth, stageHeight);
+beachWavePoints.push(0, stageHeight);
+
+// connect all beach wave points in the array(beachWavePoints) to draw the beach wave area
+const beachWave = new Konva.Line({
+    points: beachWavePoints,
+    closed: true,
+    fill: "#f3dfad",
+    listening: false
+});
+bgLayer.add(beachWave);
+
+// 加一点沙滩颗粒
+for (let i = 0; i < 60; i++) {
+    const dot = new Konva.Circle({
+        x: Math.random() * stageWidth,
+        y: beachY + 15 + Math.random() * (beachHeight - 25),
+        radius: Math.random() * 1.6 + 0.5,
+        fill: "rgba(160, 125, 70, 0.28)",
+        listening: false
+    });
+
+    bgLayer.add(dot);
+}
+// 加几个小石头/贝壳点缀
+function addPebble(x, y, w, h, color) {
+    const pebble = new Konva.Ellipse({
+        x: x,
+        y: y,
+        radiusX: w,
+        radiusY: h,
+        fill: color,
+        stroke: "rgba(80, 70, 55, 0.35)",
+        strokeWidth: 1,
+        listening: false
+    });
+    bgLayer.add(pebble);
+}
+// stones data
+addPebble(55, beachY + 105, 9, 5, "#d8c49b");
+addPebble(82, beachY + 112, 5, 3, "#cbb88f");
+addPebble(stageWidth - 70, beachY + 100, 10, 6, "#d8c49b");
+addPebble(stageWidth - 42, beachY + 113, 5, 3, "#cbb88f");
+
+
 
 const paletteLabel = new Konva.Text({
     x: 0,
@@ -494,6 +630,9 @@ bgLayer.add(paletteLabel);
 // put palette fish into palette
 // --------------------
 paletteFish.forEach((fish) => {
+    const shadow = createPaletteShadow(fish);
+    fish.shadowNode = shadow;
+    bgLayer.add(shadow);
     addPaletteFish(fish);
 });
 
@@ -506,11 +645,12 @@ enterButton.addEventListener("click", async function () {
     audioReady = true;
 
     introOverlay.style.display = "none";
-    appShell.classList.add("active");
 });
 
 
 // function: creates the fish shown in the palette and gives them their first layer of interaction
+// 负责把底部素材鱼创建出来，并给它们加 hover/drag 事件。
+// 当你按下素材鱼时，并不是把原鱼拖走，而是调用 createDraggableFishFromTemplate() main.js 克隆一条新鱼。
 function addPaletteFish(fishData) {
     const imageObj = new Image();
 
@@ -527,6 +667,7 @@ function addPaletteFish(fishData) {
         templateFish.fishSrc = fishData.src;
         templateFish.fishWidth = fishData.width;
         templateFish.fishHeight = fishData.height;
+        templateFish.shadowNode = fishData.shadowNode;
 
         // Hover: Open hand + slight zoom
         templateFish.on("mouseenter", function () {
@@ -622,6 +763,7 @@ function createDraggableFishFromTemplate(templateFish) {
 // Function: preview demo
 // Hover preview lets users hear a short example of a fish before placing it.
 // I added this because the fish carry musical identity, and I wanted users to get an immediate audio clue about difference and character. The cooldown prevents the preview from becoming chaotic when users move the cursor quickly.
+// 是 hover 试听。鼠标移到素材鱼上时，会播放一个短音，让用户知道这条鱼的音色。
 function playFishPreview(fishType) {
     if (!audioReady) return;
 
@@ -653,6 +795,7 @@ function playFishPreview(fishType) {
 }
 
 //  Determine whether a point lies within the pool grid
+// 判断有没有掉进池子
 function isInsideGrid(x, y) {
     return (
         x >= grid.x &&
@@ -666,6 +809,7 @@ function isInsideGrid(x, y) {
 // the latest col
 // the latest row
 // The x and y coordinates of the center of this grid
+// 算鱼应该吸附到哪个格子
 function getSnapPosition(x, y, fishWidth, fishHeight) {
     const col = Math.floor((x - grid.x) / grid.cellW);
     const row = Math.floor((y - grid.y) / grid.cellH);
@@ -689,6 +833,8 @@ function getSnapPosition(x, y, fishWidth, fishHeight) {
   // If the fish is dropped in the pool, it snaps into place and is recorded in placedNotes.
   // If it is dropped outside the pool, it is discarded. I chose this behaviour because it keeps the interaction simple:
   // the pool is the active sequencing area, and everything outside it is temporary or exploratory.
+// 如果鱼中心点落在网格里，就吸附到最近格子，并写入 placedNotes
+// 如果没落在网格里，就直接销毁
 function handleDroppedFish(fish) {
     const centerX = fish.x() + fish.width() / 2;
     const centerY = fish.y() + fish.height() / 2;
@@ -739,12 +885,20 @@ function handleDroppedFish(fish) {
 // enlarge the fish to 1.08x
 function enlargeFish(fish) {
     fish.scale({ x: 1.08, y: 1.08 });
+    if (fish.shadowNode) {
+        fish.shadowNode.scale({ x: 1.06, y: 1.12 });
+        bgLayer.draw();
+    }
     noteLayer.draw();
 }
 
 // return the fish to its original size
 function resetFishScale(fish) {
     fish.scale({ x: 1, y: 1 });
+    if (fish.shadowNode) {
+        fish.shadowNode.scale({ x: 1, y: 1 });
+        bgLayer.draw();
+    }
     noteLayer.draw();
 }
 
@@ -754,6 +908,7 @@ function resetFishScale(fish) {
   I separated highlight updates, scan movement, and note triggering into different functions so the visual reading system and the audio logic can stay coordinated but still be adjusted independently later.
 */
 // Update the function of the scan column position (figure out where the column should be in the pool x, and move the highlighted rectangle over)
+// 移动高亮列
 function updateScanHighlight() {
     const x = grid.x + scanState.currentCol * grid.cellW;
     scanHighlight.x(x);
@@ -761,6 +916,7 @@ function updateScanHighlight() {
 }
 
 // Shifts the scan highlight and triggers the audio for the new column
+// 让播放头往下一列走
 function advanceScan() {
     scanState.currentCol = (scanState.currentCol + 1) % grid.cols;
     updateScanHighlight();
@@ -768,6 +924,7 @@ function advanceScan() {
 }
 
 // This function iterates through all placed fish. If a fish's column matches the scan playhead, its assigned pitch is triggered in Tone.js.
+// 播放当前列所有鱼的音
 function triggerColumnNotes(colIndex) {
     placedNotes.forEach((note) => {
         if (note.col !== colIndex) return;

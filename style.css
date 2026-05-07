@@ -42,20 +42,42 @@ main {
     max-width: 1500px;
     margin: 0 auto;
     padding: 18px 20px 30px;
-    /*text-align: center;*/
+    display: flex;
+    flex-direction: column;
+    /*align-items: center;*/
 }
 
 h1 {
-    margin-bottom: 12px;
-    font-size: 2.2rem;
+    margin-bottom: 16px;
+    font-size: clamp(1.8rem, 3vw, 2.2rem);
     color: #2f2f2f;
-    margin-left: 24.5rem;
+    text-align: left;
+    padding-left: 60px;
 }
 
 #container {
-    width: 100%;
-    max-width: 1400px;
+    width: min(100%, 1400px);
     margin: 0 auto;
+    display: flex;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    main {
+        padding: 16px 12px 24px;
+    }
+
+    .intro-card {
+        padding: 22px 18px;
+    }
+
+    .intro-card h2 {
+        font-size: 1.6rem;
+    }
+
+    .intro-card p {
+        font-size: 0.95rem;
+    }
 }
 
 #intro-overlay {
