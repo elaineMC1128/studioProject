@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pool Sequencer</title>
+    <title>Ripple</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;800&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
 
     <script src="https://unpkg.com/konva@9/konva.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.js"></script>
@@ -16,31 +19,80 @@
 
 
 <body>
-<!--
-  The intro overlay works as a simple onboarding moment before the user enters the sequencer.
-  I added this because the project uses a playful metaphor instead of a conventional music interface, so the user may not immediately understand that fish act as notes and the pool acts as a sequencing space. Additionally, I included a hint about the fan feature.
-  Showing a short explanation first helps frame the interaction, reduce first-use confusion, and make entry into the tool feel deliberate.
--->
-<div id="intro-overlay">
-    <div class="intro-card">
-        <h2>Pool Sequencer</h2>
-        <p>
-            A playful aquatic sequencer where fish become musical notes.
-            <br>Drag different fish into the pool grid to build patterns,
-            <br>then use the fan to create ripples!
-        </p>
-        <button id="enter-button">Enter</button>
+
+<!-- Left panel -->
+<aside class="panel">
+
+    <h1 class="title">Ripple</h1>
+
+    <!-- Transport -->
+    <div class="transport-row">
+        <button class="btn btn-start" id="startBtn">start</button>
+        <button class="btn btn-clean" id="cleanBtn">clean</button>
     </div>
+
+    <!-- Pitch range controls -->
+    <div class="range-panel" id="rangePanel">
+        <div class="range-row">
+            <label for="innerRadius">high pitch</label>
+            <input type="range" id="innerRadius" min="24" max="46" value="34" />
+        </div>
+        <div class="range-row">
+            <label for="middleRadius">mid pitch</label>
+            <input type="range" id="middleRadius" min="56" max="82" value="67" />
+        </div>
+    </div>
+
+    <!-- Creature tray -->
+    <div class="tray" id="tray">
+        <div class="creature-card" data-type="fish">
+            <img class="creature-icon fish-icon" src="assets/images/clownfish.png" alt="fish" draggable="false" />
+            <span class="creature-label">fish</span>
+        </div>
+        <div class="creature-card" data-type="seaslug">
+            <img class="creature-icon seaslug-icon" src="assets/images/sea urchin.png" alt="sea urchin" draggable="false" />
+            <span class="creature-label">sea urchin</span>
+        </div>
+        <div class="creature-card" data-type="octopus">
+            <img class="creature-icon octopus-icon" src="assets/images/octopus.png" alt="octopus" draggable="false" />
+            <span class="creature-label">octopus</span>
+        </div>
+        <div class="creature-card" data-type="rock">
+            <img class="creature-icon rock-icon" src="assets/images/stone.png" alt="stone" draggable="false" />
+            <span class="creature-label">rock</span>
+        </div>
+    </div>
+
+</aside>
+
+<!-- Right: pool canvas -->
+<main class="pool-area">
+    <div id="konvaContainer"></div>
+</main>
+
+<!-- Instructions -->
+<button class="instructions-btn" id="instructionsBtn" type="button" aria-label="Open instructions">
+    <img src="assets/images/instructions.png" alt="" draggable="false" />
+    <span>Instructions</span>
+</button>
+
+<div class="modal-backdrop" id="instructionsModal" aria-hidden="true">
+    <section class="instructions-panel" role="dialog" aria-modal="true" aria-labelledby="instructionsTitle">
+        <button class="modal-close" id="instructionsClose" type="button" aria-label="Close instructions">×</button>
+        <h2 id="instructionsTitle">Instructions</h2>
+        <ul>
+            <li>Press start to begin the pool movement and sound.</li>
+            <li>Drag sea creatures from the sand into a pitch ring.</li>
+            <li>Inner, middle, and outer rings play high, mid, and low pitches.</li>
+            <li>Use the sliders to change the high and mid pitch areas.</li>
+            <li>Creatures make sounds when they collide with walls or each other.</li>
+            <li>Click a creature in the pool to remove it. Press clean to clear all.</li>
+        </ul>
+    </section>
 </div>
 
-<!--
-  The main section keeps the visible interface simple: a title and one container for the interactive system.
-  I kept the HTML structure minimal because most of the project’s visual behaviour is generated dynamically in JavaScript.
--->
-<main>
-    <h1>Pool Sequencer</h1>
-    <div id="container"></div>
-</main>
+<!-- Drag ghost -->
+<div id="dragGhost" class="drag-ghost"></div>
 
 </body>
 

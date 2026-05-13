@@ -1,129 +1,493 @@
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+/* ============================================================
+   RIPPLE — style.css
+   Matches mockup: water-texture bg, left panel, concentric pool
+   ============================================================ */
+
+:root {
+    --water-bg:     #a8d8e8;
+    --water-light:  #c5eaf5;
+    --water-mid:    #8ecde0;
+    --pool-1:       #b8e4f0;   /* inner ring */
+    --pool-2:       #a0d4e8;   /* middle ring */
+    --pool-3:       #88c4dc;   /* outer ring */
+    --pool-edge:    #5aace0;
+    --panel-bg:     #fdf6e3;
+    --panel-border: #e8dcc0;
+    --sand:         #d4a96a;
+    --sand-light:   #e8c88a;
+    --sand-dark:    #c09050;
+    --btn-yellow:   #f5e6b0;
+    --btn-border:   #d8c880;
+    --text-dark:    #2a4a5a;
+    --text-mid:     #4a7a8a;
+    --text-light:   #8ab0c0;
+    --white:        #ffffff;
+
+    --font-h: 'Baloo 2', cursive;
+    --font-b: 'Nunito', sans-serif;
 }
 
-/*
-  The page background sets up the aquatic mood of the project before any interaction begins.
-  I used a full-screen wave pattern instead of a flat background colour so the tool feels like a small world, not just an interface panel. This helps support the fish-pool metaphor and gives the prototype a more distinctive character.
-*/
-body {
-    background-image: url("assets/images/wavePattern.webp");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-
-    font-family: "Gill Sans", sans-serif;
-}
+/* ── Reset ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-    overflow-x: hidden;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    font-family: var(--font-b);
+    /* Water ripple texture via layered radial gradients */
+    background-color: var(--water-bg);
+    background-image:
+            radial-gradient(ellipse 120px 80px at 15% 20%, rgba(255,255,255,0.18) 0%, transparent 70%),
+            radial-gradient(ellipse 200px 120px at 75% 10%, rgba(255,255,255,0.12) 0%, transparent 70%),
+            radial-gradient(ellipse 160px 100px at 90% 60%, rgba(255,255,255,0.1) 0%, transparent 70%),
+            radial-gradient(ellipse 140px 90px at 30% 75%, rgba(255,255,255,0.14) 0%, transparent 70%),
+            radial-gradient(ellipse 100px 60px at 55% 88%, rgba(255,255,255,0.1) 0%, transparent 70%),
+            radial-gradient(ellipse 180px 110px at 8% 55%, rgba(200,240,255,0.15) 0%, transparent 70%);
 }
 
-/* Translucent Mask */
-/*
-    The translucent overlay softens the background image so the main interface stays readable.
-    I chose to tint and blur the page slightly because the background should contribute to atmosphere without competing too strongly with the sequencer itself. The result is a softer visual field that still keeps the underwater feeling present.
-*/
+/* ── Layout ─────────────────────────────────────────────── */
+body {
+    display: flex;
+    align-items: stretch;
+}
+
 body::before {
     content: "";
     position: fixed;
     inset: 0;
-
-    background: rgba(201, 230, 245, 0.9);
-    backdrop-filter: blur(2px);
-
-    z-index: -1;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url("assets/images/wavePattern.webp");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.35;
+    mix-blend-mode: soft-light;
 }
 
-main {
-    max-width: 1500px;
-    margin: 0 auto;
-    padding: 18px 20px 30px;
+/* ── LEFT PANEL ─────────────────────────────────────────── */
+.panel {
+    width: 430px;
+    min-height: 100vh;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    /*align-items: center;*/
-}
-
-h1 {
-    margin-bottom: 16px;
-    font-size: clamp(1.8rem, 3vw, 2.2rem);
-    color: #2f2f2f;
-    text-align: left;
-    padding-left: 60px;
-}
-
-#container {
-    width: min(100%, 1400px);
-    margin: 0 auto;
-    display: flex;
     justify-content: center;
+    gap: 20px;
+    padding: 28px 26px 32px 86px;
+    /* No panel bg — floats over water like the mockup */
+    position: relative;
+    z-index: 2;
 }
 
-@media (max-width: 768px) {
-    main {
-        padding: 16px 12px 24px;
-    }
-
-    .intro-card {
-        padding: 22px 18px;
-    }
-
-    .intro-card h2 {
-        font-size: 1.6rem;
-    }
-
-    .intro-card p {
-        font-size: 0.95rem;
-    }
+/* ── Title ──────────────────────────────────────────────── */
+.title {
+    font-family: var(--font-h);
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--text-dark);
+    letter-spacing: -0.5px;
+    line-height: 1;
+    /* Slight drop shadow to lift off the water bg */
+    text-shadow: 0 2px 8px rgba(255,255,255,0.6);
 }
 
-#intro-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(6px);
+/* ── Transport buttons ──────────────────────────────────── */
+.transport-row {
     display: flex;
+    gap: 18px;
+}
+
+.btn {
+    font-family: var(--font-h);
+    font-size: 19px;
+    font-weight: 600;
+    border-radius: 12px;
+    border: 2px solid var(--btn-border);
+    background: var(--btn-yellow);
+    color: var(--text-dark);
+    padding: 13px 28px;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(42,74,90,0.1);
+    transition: transform 0.12s, box-shadow 0.12s, background 0.15s;
+    letter-spacing: 0.02em;
+}
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(42,74,90,0.15);
+    background: #fff8d8;
+}
+.btn:active { transform: scale(0.96); }
+
+.btn-start { flex: 1; }
+.btn-clean { flex: 1; }
+
+.btn-start.running {
+    background: #d4f0d0;
+    border-color: #88c888;
+    color: #2a5a2a;
+}
+
+/* ── Pitch range controls ───────────────────────────────── */
+.range-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 17px 18px;
+    border-radius: 16px;
+    background:
+            radial-gradient(circle 2px at 18% 22%, rgba(166,128,57,0.16) 0 1px, transparent 2px),
+            radial-gradient(circle 2px at 72% 66%, rgba(166,128,57,0.14) 0 1px, transparent 2px),
+            linear-gradient(180deg, rgba(251,232,174,0.94), rgba(238,209,139,0.92));
+    border: 2px solid rgba(207,171,91,0.55);
+    box-shadow: 0 5px 15px rgba(42,74,90,0.09), inset 0 1px 0 rgba(255,255,255,0.45);
+}
+
+.range-row {
+    display: grid;
+    grid-template-columns: 88px 1fr;
     align-items: center;
-    justify-content: center;
-    z-index: 1000;
+    gap: 12px;
 }
 
-.intro-card {
-    width: min(520px, 90vw);
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 24px;
-    padding: 28px 30px;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
-    text-align: center;
+.range-row label {
+    font-family: var(--font-b);
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text-dark);
+    line-height: 1.05;
 }
 
-.intro-card h2 {
-    margin-bottom: 14px;
-    font-size: 2rem;
-    color: #222;
-}
-
-.intro-card p {
-    margin-bottom: 12px;
-    line-height: 1.5;
-    color: #444;
-}
-
-
-#enter-button {
-    margin-top: 8px;
-    border: none;
+.range-row input[type="range"] {
+    width: 100%;
+    height: 10px;
+    -webkit-appearance: none;
+    appearance: none;
     border-radius: 999px;
-    padding: 12px 26px;
-    font-size: 1rem;
-    background: #73dfe2;
-    color: #111;
+    background: linear-gradient(90deg, #7fc9df, #f7f0c3);
+    border: 1px solid rgba(80,140,180,0.25);
+    outline: none;
     cursor: pointer;
 }
 
-#enter-button:hover {
-    filter: brightness(0.97);
+.range-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 23px;
+    height: 23px;
+    border-radius: 50%;
+    background: #fff9df;
+    border: 2px solid #caa75c;
+    box-shadow: 0 2px 7px rgba(42,74,90,0.18);
+}
+
+.range-row input[type="range"]::-moz-range-thumb {
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: #fff9df;
+    border: 2px solid #caa75c;
+    box-shadow: 0 2px 7px rgba(42,74,90,0.18);
+}
+
+/* ── Creature tray ──────────────────────────────────────── */
+.tray {
+    position: relative;
+    z-index: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px 20px;
+    margin-top: 20px;
+    padding: 40px 22px 28px;
+    overflow: visible;
+    border: 0;
+    border-bottom: 3px solid rgba(96,188,226,0.45);
+    border-radius: 0 0 14px 14px;
+    box-shadow:
+            0 8px 18px rgba(154,121,54,0.12),
+            inset 0 8px 18px rgba(255,255,255,0.28);
+    background-image:
+            radial-gradient(circle 2px at 12% 22%, rgba(166,128,57,0.22) 0 1px, transparent 2px),
+            radial-gradient(circle 2px at 84% 18%, rgba(166,128,57,0.18) 0 1px, transparent 2px),
+            radial-gradient(circle 3px at 31% 67%, rgba(166,128,57,0.16) 0 1px, transparent 3px),
+            radial-gradient(circle 2px at 68% 77%, rgba(166,128,57,0.2) 0 1px, transparent 2px),
+            radial-gradient(circle 2px at 47% 39%, rgba(166,128,57,0.14) 0 1px, transparent 2px),
+            linear-gradient(180deg, #f4dda1 0%, #ecd08a 100%);
+}
+
+.tray::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -18px;
+    height: 36px;
+    z-index: 0;
+    background: #f4dda1;
+    clip-path: polygon(
+            0 48%,
+            9% 58%,
+            19% 44%,
+            30% 52%,
+            43% 35%,
+            56% 49%,
+            68% 38%,
+            80% 53%,
+            91% 42%,
+            100% 50%,
+            100% 100%,
+            0 100%
+    );
+}
+
+.creature-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 9px;
+    background: transparent;
+    border-radius: 0;
+    width: 100%;
+    min-height: 126px;
+    aspect-ratio: auto;
+    cursor: grab;
+    box-shadow: none;
+    transition: transform 0.2s, opacity 0.2s;
+    user-select: none;
+    touch-action: none;
+    justify-content: center;
+    border: 0;
+}
+.creature-card:hover {
+    transform: translateY(-5px) scale(1.05);
+}
+.creature-card:active { cursor: grabbing; transform: scale(0.95); }
+.creature-card.dragging { opacity: 0.35; }
+
+.creature-card::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 32px;
+    width: 62%;
+    height: 19px;
+    z-index: 0;
+    border-radius: 50%;
+    background: rgba(115,91,47,0.22);
+    transform: translateX(-50%);
+    filter: blur(0.3px);
+}
+
+.creature-icon {
+    position: relative;
+    z-index: 1;
+    width: 78%;
+    height: 84px;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+    user-select: none;
+}
+.creature-label {
+    font-family: var(--font-b);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+    letter-spacing: 0.02em;
+    position: relative;
+    z-index: 1;
+}
+
+/* ── Pool area ──────────────────────────────────────────── */
+.pool-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+}
+
+#konvaContainer {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+#konvaContainer canvas { display: block; }
+
+/* ── Instructions ───────────────────────────────────────── */
+.instructions-btn {
+    position: fixed;
+    right: -20px;
+    bottom: 2px;
+    z-index: 4;
+    width: 214px;
+    height: 140px;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    transform-origin: center bottom;
+    transition: transform 0.2s, filter 0.2s;
+}
+
+.instructions-btn:hover {
+    transform: translateY(-5px) scale(1.05);
+    filter: drop-shadow(0 10px 18px rgba(42,74,90,0.24));
+}
+
+.instructions-btn:active,
+.instructions-btn.pop {
+    transform: translateY(-1px) scale(0.95);
+}
+
+.instructions-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+    user-select: none;
+}
+
+.instructions-btn span {
+    position: absolute;
+    left: 51%;
+    top: 25%;
+    transform: translate(-50%, -50%) rotate(-1.5deg);
+    width: 72%;
+    font-family: var(--font-h);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1;
+    color: #38454b;
+    text-align: center;
+    pointer-events: none;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.45);
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    background: rgba(25,48,58,0.32);
+    backdrop-filter: blur(5px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+.modal-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.instructions-panel {
+    position: relative;
+    width: min(560px, 90vw);
+    border-radius: 18px;
+    padding: 34px 38px 34px;
+    background:
+            radial-gradient(circle 2px at 15% 20%, rgba(166,128,57,0.14) 0 1px, transparent 2px),
+            radial-gradient(circle 2px at 82% 76%, rgba(166,128,57,0.14) 0 1px, transparent 2px),
+            linear-gradient(180deg, #fff4c8, #efd48f);
+    border: 3px solid rgba(189,145,61,0.62);
+    box-shadow: 0 24px 60px rgba(16,38,48,0.28), inset 0 1px 0 rgba(255,255,255,0.6);
+    transform: translateY(12px) scale(0.96);
+    transition: transform 0.2s ease;
+}
+
+.modal-backdrop.visible .instructions-panel {
+    transform: translateY(0) scale(1);
+}
+
+.instructions-panel h2 {
+    font-family: var(--font-h);
+    font-size: 34px;
+    line-height: 1;
+    color: var(--text-dark);
+    margin-bottom: 18px;
+}
+
+.instructions-panel ul {
+    display: grid;
+    gap: 12px;
+    padding-left: 20px;
+    font-size: 17px;
+    line-height: 1.35;
+    font-weight: 700;
+    color: #40565f;
+}
+
+.modal-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid rgba(159,117,45,0.45);
+    background: rgba(255,250,226,0.78);
+    color: var(--text-dark);
+    font-size: 25px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.14s, background 0.14s;
+}
+
+.modal-close:hover {
+    transform: scale(1.08);
+    background: #fff8d8;
+}
+
+/* ── Drag ghost ─────────────────────────────────────────── */
+.drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    width: 54px;
+    height: 54px;
+    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 0;
+    transition: opacity 0.1s;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+.drag-ghost.visible { opacity: 0.9; }
+.drag-ghost img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* ── Ripple animation (CSS class toggled by JS) ─────────── */
+@keyframes rippleOut {
+    0%   { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(2.5); opacity: 0; }
+}
+
+@media (max-height: 760px) {
+    .panel {
+        justify-content: flex-start;
+        gap: 14px;
+        padding-top: 22px;
+        padding-bottom: 22px;
+    }
+
+    .title {
+        font-size: 42px;
+    }
+
+    .creature-card {
+        min-height: 104px;
+    }
+
+    .creature-icon {
+        height: 68px;
+    }
 }

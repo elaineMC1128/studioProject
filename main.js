@@ -1,1027 +1,763 @@
-const introOverlay = document.getElementById("intro-overlay");
-const enterButton = document.getElementById("enter-button");
-
-/*
-  These layout values define the overall structure of the stage.
-  I kept them grouped at the top so the visual proportions of the project can be adjusted more easily while developing.
-*/
-const layout = {
-    marginTop: 70,
-    marginBottom: 20,
-    paletteHeight: 120,
-    sideWidth: 260, // left control area
-    gap: 20
-};
-
-const stageWidth = 1400;
-const stageHeight = 697;
-
-// create a stage
-const stage = new Konva.Stage({
-    container: "container", // id of container <div>
-    width: stageWidth,
-    height: stageHeight
-});
-
-// 窗口响应式
-function fitStageIntoContainer() {
-    const container = document.getElementById("container");
-    const containerWidth = container.clientWidth;
-
-    const scale = Math.min(containerWidth / stageWidth, 1);
-
-    stage.width(stageWidth * scale);
-    stage.height(stageHeight * scale);
-    stage.scale({ x: scale, y: scale });
-}
-
-const paletteShadowBaselineY = 680;
-
-function createPaletteShadow(fishData) {
-    return new Konva.Ellipse({
-        x: fishData.x + fishData.width / 2,
-        y: paletteShadowBaselineY,
-        radiusX: 30,
-        radiusY: 8,
-        fill: "rgba(0, 0, 0, 0.16)",
-        listening: false
-    });
-}
-
-fitStageIntoContainer();
-window.addEventListener("resize", fitStageIntoContainer);
-
-// Create Layers
-// Draw a static pond grid and scan highlight rectangles
-const bgLayer = new Konva.Layer();
-// Handle the left control area
-const uiLayer = new Konva.Layer();
-// Managing “marine life” that has been dragged and placed
-const noteLayer = new Konva.Layer();
-
-stage.add(bgLayer);
-stage.add(uiLayer);
-stage.add(noteLayer);
-
-
-
-
-
-// store the moving playback state of the sequencer
-// I use an accumulatedTime logic to allow smooth speed transitions via the fan controller.
-const scanState = {
-    currentCol: 0,
-    speed: 0.8,          // initial speed
-    isPlaying: false,    // play/pause state
-    accumulatedTime: 0,  // accumulates delta time from the animation loop
-    stepInterval: 600    // base timing interval in milliseconds
-};
-
-// fish data
-const paletteFish = [
-    {
-        type: "clownfish",
-        src: "assets/images/clownfish.png",
-        x: 90,
-        y: 593,
-        width: 95,
-        height: 90
-    },
-    {
-        type: "hairtail",
-        src: "assets/images/hairtail.png",
-        x: 275,
-        y: 593,
-        width: 95,
-        height: 95
-    },
-    {
-        type: "seaUrchin",
-        src: "assets/images/sea urchin.png",
-        x: 465,
-        y: 593,
-        width: 85,
-        height: 85
-    },
-    {
-        type: "starfish",
-        src: "assets/images/star fish.png",
-        x: 665,
-        y: 605,
-        width: 65,
-        height: 60
-    },
-    {
-        type: "puffer",
-        src: "assets/images/puffer.png",
-        x: 860,
-        y: 610,
-        width: 70,
-        height: 60
-    },
-    {
-        type: "tropicalFish",
-        src: "assets/images/tropical fish.png",
-        x: 1055,
-        y: 610,
-        width: 65,
-        height: 60
-    },
-    {
-        type: "sacabambaspis",
-        src: "assets/images/sacabambaspis.png",
-        x: 1245,
-        y: 610,
-        width: 65,
-        height: 65
-    }
-];
-
-// create synth
-// each fish is assigned its own synth character rather than sharing one generic sound
-const synths = {
-    clownfish: new Tone.Synth({
-        oscillator: { type: "triangle" },
-        envelope: { attack: 0.005, decay: 0.08, sustain: 0.2, release: 0.15 }
-    }).toDestination(),
-
-    hairtail: new Tone.Synth({
-        oscillator: { type: "sine" },
-        envelope: { attack: 0.01, decay: 0.12, sustain: 0.3, release: 0.25 }
-    }).toDestination(),
-
-    seaUrchin: new Tone.Synth({
-        oscillator: { type: "square" },
-        envelope: { attack: 0.001, decay: 0.05, sustain: 0.05, release: 0.05 }
-    }).toDestination(),
-
-    starfish: new Tone.Synth({
-        oscillator: { type: "triangle" },
-        envelope: { attack: 0.02, decay: 0.15, sustain: 0.2, release: 0.4 }
-    }).toDestination(),
-
-    puffer: new Tone.Synth({
-        oscillator: { type: "sine" },
-        envelope: { attack: 0.005, decay: 0.09, sustain: 0.15, release: 0.2 }
-    }).toDestination(),
-
-    tropicalFish: new Tone.Synth({
-        oscillator: { type: "triangle" },
-        envelope: { attack: 0.003, decay: 0.06, sustain: 0.1, release: 0.1 }
-    }).toDestination(),
-
-    sacabambaspis: new Tone.Synth({
-        oscillator: { type: "square" },
-        envelope: { attack: 0.005, decay: 0.1, sustain: 0.15, release: 0.2 }
-    }).toDestination()
-};
-
-// Define row notes -> pitch
-const rowNotes = ["C5", "G4", "E4", "D4", "C4", "A3", "G3", "E3"];
-
-/*
-  placedNotes is the memory of the composition.
-  It stores which fish have been placed, where they are, and which stage object they belong to.
-  It makes the arrangement becomes a repeatable sequence.
-*/
-const placedNotes = [];
-
-const previewCooldowns = {};
-
-let audioReady = false;
-
-let noteIdCounter = 0;
-
-
-// --------------------
-// left control area 开始画左边的控制区
-// --------------------
-
-// 创建一个组，用来放fan的所有shape
-const controlPanel = new Konva.Group({
-    x: 98,
-    y: 80
-});
-
-// fan outer 风扇外圈
-const fanOuter = new Konva.Circle({
-    x: 80,
-    y: 80,
-    radius: 48,
-    fill: "#d8f3f6",
-    stroke: "#111",
-    strokeWidth: 4
-});
-
-// fan ring 风扇内圈
-const fanRing = new Konva.Circle({
-    x: 80,
-    y: 80,
-    radius: 34,
-    stroke: "#111",
-    strokeWidth: 3
-});
-
-// fan blade group
-const fanBladeGroup = new Konva.Group({
-    x: 80,
-    y: 80,
-    rotation: 0
-});
-
-// draw the three blades
-for (let i = 0; i < 3; i++) {
-    const blade = new Konva.Ellipse({
-        x: 0,
-        y: 0,
-        radiusX: 10,
-        radiusY: 22,
-        offsetY: 18,
-        fill: "#f8f8f8",
-        stroke: "#111",
-        strokeWidth: 3,
-        rotation: i * 120
-    });
-    // add the three blades to blade group
-    fanBladeGroup.add(blade);
-}
-
-// fan center
-const fanCenter = new Konva.Circle({
-    x: 80,
-    y: 80,
-    radius: 11,
-    fill: "#73dfe2",
-    stroke: "#111",
-    strokeWidth: 3
-});
-
-// fan stand
-const fanStand = new Konva.Rect({
-    x: 62,
-    y: 126,
-    width: 36,
-    height: 26,
-    fill: "#73dfe2",
-    stroke: "#111",
-    strokeWidth: 4
-});
-
-// fan base
-const fanBase = new Konva.Rect({
-    x: 36,
-    y: 152,
-    width: 88,
-    height: 12,
-    fill: "#73dfe2",
-    stroke: "#111",
-    strokeWidth: 4
-});
-
-// play/pause icon
-const fanToggleText = new Konva.Text({
-    x: 74,
-    y: 73,
-    text: "▶",
-    fontSize: 18,
-    fontStyle: "bold",
-    fill: "#111",
-    listening: false
-});
-
-// add all shapes of the fan to the fan group
-controlPanel.add(
-    fanOuter,
-    fanRing,
-    fanBladeGroup,
-    fanCenter,
-    fanStand,
-    fanBase,
-    fanToggleText
-);
-
-// add the fan group to the control layer
-uiLayer.add(controlPanel);
-
-
-fanOuter.on("click tap", togglePlay);
-fanRing.on("click tap", togglePlay);
-fanCenter.on("click tap", togglePlay);
-fanBladeGroup.on("click tap", togglePlay);
-fanToggleText.on("click tap", togglePlay);
-
-// create clean button
-const cleanButton = new Konva.Rect({
-    x: 125,
-    y: 400,
-    width: 110,
-    height: 34,
-    cornerRadius: 10,
-    fill: "#6de29f"
-});
-
-const cleanText = new Konva.Text({
-    x: 148,
-    y: 411,
-    width: 64,
-    text: "Clean",
-    align: "center",
-    fontSize: 14,
-    fontFamily: "Gill Sans",
-    fill: "#111"
-});
-
-// create restart button
-const restartButton = new Konva.Rect({
-    x: 125,
-    y: 460,
-    width: 110,
-    height: 34,
-    cornerRadius: 10,
-    fill: "#f48c8c"
-});
-
-const restartText = new Konva.Text({
-    x: 145,
-    y: 470,
-    width: 70,
-    text: "Restart",
-    align: "center",
-    fontSize: 14,
-    fontFamily: "Gill Sans",
-    fill: "#111"
-});
-
-uiLayer.add(restartButton, restartText, cleanButton, cleanText);
-
-
-restartButton.on("click tap", restartSequencer);
-restartText.on("click tap", restartSequencer);
-
-cleanButton.on("click tap", cleanSequencer);
-cleanText.on("click tap", cleanSequencer);
-
-
-// create slide group
-const slideGroup = new Konva.Group({
-    x: 7,
-    y: -55
-})
-
-// create the slider
-const sliderTrack = new Konva.Line({
-    points: [95, 380, 250, 380],
-    stroke: "#d9cfd0",
-    strokeWidth: 12,
-    lineCap: "round"
-});
-
-const speedText = new Konva.Text({
-    x: 95,
-    y: 350,
-    width: 155,
-    text: "Speed",
-    align: "center",
-    fontSize: 14,
-    fontFamily: "Gill Sans",
-    fill: "#333"
-});
-
-const slowText = new Konva.Text({
-    x: 80,
-    y: 405,
-    text: "Slow",
-    fontSize: 13,
-    fontFamily: "Gill Sans",
-    fill: "#555"
-});
-
-const fastText = new Konva.Text({
-    x: 242,
-    y: 405,
-    text: "Fast",
-    fontSize: 13,
-    fontFamily: "Gill Sans",
-    fill: "#555"
-});
-
-const sliderThumb = new Konva.Circle({
-    x: 95,
-    y: 380,
-    radius: 12,
-    fill: "#f08a8a",
-    draggable: true,
-    dragBoundFunc: function (pos) {
-        const minX = 95;
-        const maxX = 250;
-        return {
-            x: Math.max(minX, Math.min(maxX, pos.x)),
-            y: 325
-        };
-    }
-});
-
-sliderThumb.on("dragmove", function () {
-    updateSpeedFromSlider();
-});
-
-const minusText = new Konva.Text({
-    x: 60,
-    y: 366,
-    text: "-",
-    fontSize: 28,
-    fill: "#111"
-});
-
-const plusText = new Konva.Text({
-    x: 270,
-    y: 368,
-    text: "+",
-    fontSize: 28,
-    fill: "#111"
-});
-
-slideGroup.add(
-    speedText, sliderTrack, sliderThumb, minusText, plusText, slowText, fastText
-);
-
-uiLayer.add(slideGroup);
-// --------------------
-// Pool
-// --------------------
-/*
-  The grid is the core sequencing space of the project.
-  Instead of using a conventional DAW timeline, I translate sequencing into a pool made of cells, so placement becomes a spatial decision. This supports the project's mapping idea: where the fish is placed changes how and when it sounds.
-*/
-
-// Defining a 7x5 grid
-const grid = {
-    cols: 7,
-    rows: 6,
-    x: 420,
-    y: 5,
-    width: 900,
-    height: 510
-};
-
-grid.cellW = grid.width / grid.cols;
-grid.cellH = grid.height / grid.rows;
-
-const poolShadow = new Konva.Rect({
-    x: grid.x,
-    y: grid.y + 10,
-    width: grid.width,
-    height: grid.height,
-    cornerRadius: 18,
-    fill: "rgba(0,0,0,0.12)",
-    blurRadius: 10
-});
-bgLayer.add(poolShadow);
-
-const poolBorder = new Konva.Rect({
-    x: grid.x - 10,
-    y: grid.y - 10,
-    width: grid.width + 20,
-    height: grid.height + 20,
-    cornerRadius: 18,
-    fill: "#f3f3f0"
-});
-bgLayer.add(poolBorder);
-
-const poolRect = new Konva.Rect({
-    x: grid.x,
-    y: grid.y,
-    width: grid.width,
-    height: grid.height,
-    cornerRadius: 14,
-    fill: "#acd7e0"
-});
-bgLayer.add(poolRect);
-
-
-// --------------------
-// Grid
-// --------------------
-
-// use loop to draw vertical lines
-for (let i = 0; i <= grid.cols; i++) {
-    const x = grid.x + i * grid.cellW;
-
-    const line = new Konva.Line({
-        points: [x, grid.y, x, grid.y + grid.height],
-        stroke: "rgba(255,255,255,0.72)",
-        strokeWidth: 2
-    });
-
-    bgLayer.add(line);
-}
-
-// draw horizontal lines
-for (let j = 0; j <= grid.rows; j++) {
-    const y = grid.y + j * grid.cellH;
-
-    const line = new Konva.Line({
-        points: [grid.x, y, grid.x + grid.width, y],
-        stroke: "rgba(255,255,255,0.72)",
-        strokeWidth: 2
-    });
-
-    bgLayer.add(line);
-}
-
-// Create a highlighted rectangle for the scan column
-const scanHighlight = new Konva.Rect({
-    x: grid.x, // highlight at the leftmost column initially
-    y: grid.y,
-    width: grid.cellW,
-    height: grid.height,
-    fill: "rgba(255,255,255,0.18)", // use semi-transparent white for the highlights; it looks a bit like ripples on water
-    listening: false, // for visual purposes only; it does not require mouse interaction
-    visible: false
-});
-
-bgLayer.add(scanHighlight);
-scanHighlight.moveToTop();
-
-// --------------------
-// palette area (for storing the fish)
-// --------------------
-const beachY = 560;
-const beachHeight = stageHeight - beachY;
-
-// 沙滩底色
-const paletteArea = new Konva.Rect({
-    x: 0,
-    y: beachY,
-    width: stageWidth,
-    height: beachHeight,
-    fill: "#ead8a6"
-});
-bgLayer.add(paletteArea);
-
-// 沙滩顶部的波浪边缘
-const beachWavePoints = [];
-beachWavePoints.push(0, beachY);
-
-for (let x = 0; x <= stageWidth; x += 28) {
-    const waveY = beachY + Math.sin(x * 0.035) * 5 + Math.sin(x * 0.011) * 3;
-    beachWavePoints.push(x, waveY);
-}
-
-beachWavePoints.push(stageWidth, stageHeight);
-beachWavePoints.push(0, stageHeight);
-
-// connect all beach wave points in the array(beachWavePoints) to draw the beach wave area
-const beachWave = new Konva.Line({
-    points: beachWavePoints,
-    closed: true,
-    fill: "#f3dfad",
-    listening: false
-});
-bgLayer.add(beachWave);
-
-// 加一点沙滩颗粒
-for (let i = 0; i < 60; i++) {
-    const dot = new Konva.Circle({
-        x: Math.random() * stageWidth,
-        y: beachY + 15 + Math.random() * (beachHeight - 25),
-        radius: Math.random() * 1.6 + 0.5,
-        fill: "rgba(160, 125, 70, 0.28)",
-        listening: false
-    });
-
-    bgLayer.add(dot);
-}
-// 加几个小石头/贝壳点缀
-function addPebble(x, y, w, h, color) {
-    const pebble = new Konva.Ellipse({
-        x: x,
-        y: y,
-        radiusX: w,
-        radiusY: h,
-        fill: color,
-        stroke: "rgba(80, 70, 55, 0.35)",
-        strokeWidth: 1,
-        listening: false
-    });
-    bgLayer.add(pebble);
-}
-// stones data
-addPebble(55, beachY + 105, 9, 5, "#d8c49b");
-addPebble(82, beachY + 112, 5, 3, "#cbb88f");
-addPebble(stageWidth - 70, beachY + 100, 10, 6, "#d8c49b");
-addPebble(stageWidth - 42, beachY + 113, 5, 3, "#cbb88f");
-
-
-
-const paletteLabel = new Konva.Text({
-    x: 0,
-    y: 570,
-    width: stageWidth,
-    text: "Drag fish into the pool",
-    fontFamily: "Gill Sans",
-    align: "center",
-    fontSize: 20,
-    fill: "#4a4a4a"
-});
-bgLayer.add(paletteLabel);
-
-// --------------------
-// put palette fish into palette
-// --------------------
-paletteFish.forEach((fish) => {
-    const shadow = createPaletteShadow(fish);
-    fish.shadowNode = shadow;
-    bgLayer.add(shadow);
-    addPaletteFish(fish);
-});
-
-bgLayer.draw();
-uiLayer.draw();
-noteLayer.draw();
-
-enterButton.addEventListener("click", async function () {
-    await Tone.start();
-    audioReady = true;
-
-    introOverlay.style.display = "none";
-});
-
-
-// function: creates the fish shown in the palette and gives them their first layer of interaction
-// 负责把底部素材鱼创建出来，并给它们加 hover/drag 事件。
-// 当你按下素材鱼时，并不是把原鱼拖走，而是调用 createDraggableFishFromTemplate() main.js 克隆一条新鱼。
-function addPaletteFish(fishData) {
-    const imageObj = new Image();
-
-    imageObj.onload = function () {
-        const templateFish = new Konva.Image({
-            x: fishData.x,
-            y: fishData.y,
-            image: imageObj,
-            width: fishData.width,
-            height: fishData.height
-        });
-
-        templateFish.fishType = fishData.type;
-        templateFish.fishSrc = fishData.src;
-        templateFish.fishWidth = fishData.width;
-        templateFish.fishHeight = fishData.height;
-        templateFish.shadowNode = fishData.shadowNode;
-
-        // Hover: Open hand + slight zoom
-        templateFish.on("mouseenter", function () {
-            stage.container().style.cursor = "grab";
-            enlargeFish(templateFish);
-            playFishPreview(templateFish.fishType);
-        });
-
-        // Mouse out: Restore default + Restore size
-        templateFish.on("mouseleave", function () {
-            stage.container().style.cursor = "default";
-            resetFishScale(templateFish);
-        });
-
-        // Press and drag to copy
-        templateFish.on("mousedown touchstart", function () {
-            stage.container().style.cursor = "grabbing";
-            createDraggableFishFromTemplate(templateFish);
-        });
-
-        noteLayer.add(templateFish);
-        noteLayer.draw();
-    };
-
-    imageObj.onerror = function () {
-        console.error("Failed to load:", fishData.src);
-    };
-
-    imageObj.src = fishData.src;
-}
-
-/*
-  Instead of dragging the original palette fish away, the system creates a clone.
-  I chose this because the bottom tray should stay available as a reusable set of musical materials.
-  The clone then becomes the active object the user composes with, which keeps the interaction clear and repeatable.
-*/
-function createDraggableFishFromTemplate(templateFish) {
-    const clone = new Konva.Image({
-        x: templateFish.x(),
-        y: templateFish.y(),
-        image: templateFish.image(),
-        width: templateFish.width(),
-        height: templateFish.height(),
-        draggable: true
-    });
-
-    clone.fishType = templateFish.fishType;
-    clone.noteId = noteIdCounter++;
-    clone.isPlaced = false;
-
-    // Hover: Open hand + slight zoom
-    clone.on("mouseenter", function () {
-        if (!clone.isDragging()) {
-            stage.container().style.cursor = "grab";
-            enlargeFish(clone);
-        }
-    });
-
-    // Mouse out: Restore default + Restore size
-    clone.on("mouseleave", function () {
-        if (!clone.isDragging()) {
-            stage.container().style.cursor = "default";
-            resetFishScale(clone);
-        }
-    });
-
-    // Start dragging: grab the hand + keep zoomed in
-    clone.on("dragstart", function () {
-        stage.container().style.cursor = "grabbing";
-        enlargeFish(clone);
-    });
-
-    // End drag: if the mouse is still over the fish, return to grab; otherwise, default
-    clone.on("dragend", function () {
-        handleDroppedFish(clone);
-
-        // If the fish is still there, keep the hover state
-        if (clone.getStage()) {
-            stage.container().style.cursor = "grab";
-            enlargeFish(clone);
-        }
-    });
-
-    noteLayer.add(clone);
-    clone.moveToTop();
-    noteLayer.draw();
-
-    clone.startDrag();
-    stage.container().style.cursor = "grabbing";
-    enlargeFish(clone);
-}
-
-// Function: preview demo
-// Hover preview lets users hear a short example of a fish before placing it.
-// I added this because the fish carry musical identity, and I wanted users to get an immediate audio clue about difference and character. The cooldown prevents the preview from becoming chaotic when users move the cursor quickly.
-// 是 hover 试听。鼠标移到素材鱼上时，会播放一个短音，让用户知道这条鱼的音色。
-function playFishPreview(fishType) {
-    if (!audioReady) return;
-
-    // Prevent repeated, excessive triggering when the cursor is continuously hovered over an element
-    if (previewCooldowns[fishType]) return;
-
-    const synth = synths[fishType];
-    if (!synth) return;
-
-    // 给每种鱼一个固定 demo 音高
-    const previewNotes = {
-        clownfish: "C5",
-        hairtail: "G3",
-        seaUrchin: "E4",
-        starfish: "A4",
-        puffer: "D4",
-        tropicalFish: "G4",
-        sacabambaspis: "C4"
-    };
-
-    const pitch = previewNotes[fishType] || "C4";
-    synth.triggerAttackRelease(pitch, "8n");
-
-    previewCooldowns[fishType] = true;
-
-    setTimeout(() => {
-        previewCooldowns[fishType] = false;
-    }, 250);
-}
-
-//  Determine whether a point lies within the pool grid
-// 判断有没有掉进池子
-function isInsideGrid(x, y) {
-    return (
-        x >= grid.x &&
-        x <= grid.x + grid.width &&
-        y >= grid.y &&
-        y <= grid.y + grid.height
-    );
-}
-
-// Convert the drag position to:
-// the latest col
-// the latest row
-// The x and y coordinates of the center of this grid
-// 算鱼应该吸附到哪个格子
-function getSnapPosition(x, y, fishWidth, fishHeight) {
-    const col = Math.floor((x - grid.x) / grid.cellW);
-    const row = Math.floor((y - grid.y) / grid.cellH);
-
-    const safeCol = Math.max(0, Math.min(grid.cols - 1, col));
-    const safeRow = Math.max(0, Math.min(grid.rows - 1, row));
-
-    const snappedX = grid.x + safeCol * grid.cellW + (grid.cellW - fishWidth) / 2;
-    const snappedY = grid.y + safeRow * grid.cellH + (grid.cellH - fishHeight) / 2;
-
-    return {
-        col: safeCol,
-        row: safeRow,
-        x: snappedX,
-        y: snappedY
-    };
-}
-
-
-  // handleDroppedFish decides whether a dragged fish becomes part of the composition or is removed.
-  // If the fish is dropped in the pool, it snaps into place and is recorded in placedNotes.
-  // If it is dropped outside the pool, it is discarded. I chose this behaviour because it keeps the interaction simple:
-  // the pool is the active sequencing area, and everything outside it is temporary or exploratory.
-// 如果鱼中心点落在网格里，就吸附到最近格子，并写入 placedNotes
-// 如果没落在网格里，就直接销毁
-function handleDroppedFish(fish) {
-    const centerX = fish.x() + fish.width() / 2;
-    const centerY = fish.y() + fish.height() / 2;
-
-    const existingIndex = placedNotes.findIndex(
-        (note) => note.id === fish.noteId
-    );
-
-    if (isInsideGrid(centerX, centerY)) {
-        const snapped = getSnapPosition(centerX, centerY, fish.width(), fish.height());
-
-        fish.position({
-            x: snapped.x,
-            y: snapped.y
-        });
-
-        fish.gridCol = snapped.col;
-        fish.gridRow = snapped.row;
-        fish.isPlaced = true;
-
-        const noteData = {
-            id: fish.noteId,
-            fishType: fish.fishType,
-            col: snapped.col,
-            row: snapped.row,
-            node: fish
-        };
-
-        if (existingIndex >= 0) {
-            placedNotes[existingIndex] = noteData;
-        } else {
-            placedNotes.push(noteData);
-        }
-
-        noteLayer.draw();
-        stage.container().style.cursor = "grab";
-    } else {
-        if (existingIndex >= 0) {
-            placedNotes.splice(existingIndex, 1);
-        }
-
-        fish.destroy();
-        noteLayer.draw();
-        stage.container().style.cursor = "default";
-    }
-}
-
-// enlarge the fish to 1.08x
-function enlargeFish(fish) {
-    fish.scale({ x: 1.08, y: 1.08 });
-    if (fish.shadowNode) {
-        fish.shadowNode.scale({ x: 1.06, y: 1.12 });
-        bgLayer.draw();
-    }
-    noteLayer.draw();
-}
-
-// return the fish to its original size
-function resetFishScale(fish) {
-    fish.scale({ x: 1, y: 1 });
-    if (fish.shadowNode) {
-        fish.shadowNode.scale({ x: 1, y: 1 });
-        bgLayer.draw();
-    }
-    noteLayer.draw();
-}
-
-/*
-  The scan functions move the playback wave across the grid and trigger notes column by column.
-  This is where the arrangement becomes time-based output.
-  I separated highlight updates, scan movement, and note triggering into different functions so the visual reading system and the audio logic can stay coordinated but still be adjusted independently later.
-*/
-// Update the function of the scan column position (figure out where the column should be in the pool x, and move the highlighted rectangle over)
-// 移动高亮列
-function updateScanHighlight() {
-    const x = grid.x + scanState.currentCol * grid.cellW;
-    scanHighlight.x(x);
-    bgLayer.draw();
-}
-
-// Shifts the scan highlight and triggers the audio for the new column
-// 让播放头往下一列走
-function advanceScan() {
-    scanState.currentCol = (scanState.currentCol + 1) % grid.cols;
-    updateScanHighlight();
-    triggerColumnNotes(scanState.currentCol);
-}
-
-// This function iterates through all placed fish. If a fish's column matches the scan playhead, its assigned pitch is triggered in Tone.js.
-// 播放当前列所有鱼的音
-function triggerColumnNotes(colIndex) {
-    placedNotes.forEach((note) => {
-        if (note.col !== colIndex) return;
-
-        const synth = synths[note.fishType];
-        const pitch = rowNotes[note.row];
-
-        if (synth && pitch) {
-            synth.triggerAttackRelease(pitch, "8n");
-        }
-    });
-}
-
-// togglePlay starts and pauses the sequencer, while also revealing the scan highlight when playback begins
-async function togglePlay() {
-    const wasPlaying = scanState.isPlaying;
-
-    if (!audioReady) {
+/* ============================================================
+   RIPPLE — ripple.js
+   Three pitch-zone pool · creature physics · marimba audio
+   Konva.js (rendering) + Tone.js (synthesis)
+   ============================================================ */
+(function () {
+    'use strict';
+
+    /* ── Ring config (inner=0, middle=1, outer=2) ──────────── */
+    const RING_RADII    = [0, 0, 0];      // computed from pool
+    const RING_RATIOS   = [0.34, 0.67, 1];
+    const RING_COLORS   = ['#c8eaf8', '#acd8ee', '#90c6e4'];
+    const RING_NOTES    = [                // marimba note sets per ring
+        ['C5','E5','G5','B5'],               // inner  → high
+        ['G4','A4','C5','E5'],               // middle → mid
+        ['C4','E4','G4','A4'],               // outer  → low
+    ];
+
+    /* ── Marimba synth via Tone.js ──────────────────────────── */
+    // Marimba = short attack, fast decay, sine + small harmonics
+    let audioStarted = false;
+    const reverb = new Tone.Reverb({ decay: 1.8, wet: 0.28 }).toDestination();
+    const masterVol = new Tone.Volume(-4).connect(reverb);
+
+    async function startAudio () {
+        if (audioStarted) return;
         await Tone.start();
-        audioReady = true;
+        audioStarted = true;
     }
 
-    scanState.isPlaying = !scanState.isPlaying;
+    function makeMarimba () {
+        // Layered: fundamental sine + weak 2nd harmonic + noise click
+        const sine = new Tone.Synth({
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.001, decay: 0.55, sustain: 0.0, release: 0.3 },
+        });
+        const harm = new Tone.Synth({
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.001, decay: 0.2, sustain: 0.0, release: 0.1 },
+            volume: -12,
+        });
+        const click = new Tone.NoiseSynth({
+            noise: { type: 'white' },
+            envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.01 },
+            volume: -22,
+        });
+        sine.connect(masterVol);
+        harm.connect(masterVol);
+        click.connect(masterVol);
+        return { sine, harm, click };
+    }
 
-    if (scanState.isPlaying) {
-        scanHighlight.visible(true);
-        updateScanHighlight();
+    function playMarimba (note, ringIdx, velocityScale) {
+        if (!audioStarted) return;
+        const notes = RING_NOTES[ringIdx];
+        const chosen = note || notes[Math.floor(Math.random() * notes.length)];
+        const vol = -18 + velocityScale * 14; // -18dB quiet → -4dB loud
 
-        if (!wasPlaying) {
-            triggerColumnNotes(scanState.currentCol);
+        const { sine, harm, click } = makeMarimba();
+        sine.volume.value = vol;
+        harm.volume.value = vol - 12;
+
+        sine.triggerAttackRelease(chosen, '8n');
+        // harmony one octave up, quieter
+        try {
+            const freq2 = Tone.Frequency(chosen).toFrequency() * 2;
+            harm.triggerAttackRelease(freq2, '16n');
+        } catch (_) {}
+        click.triggerAttackRelease('16n');
+
+        setTimeout(() => {
+            try { sine.dispose(); harm.dispose(); click.dispose(); } catch (_) {}
+        }, 3000);
+    }
+
+    /* ── Creature definitions ───────────────────────────────── */
+    const CREATURE_DEFS = {
+        fish: {
+            radius: 20,
+            mass: 1.0,
+            baseSpeed: 2.0,
+            color: '#ff9944',
+            stroke: '#dd6600',
+            icon: 'assets/clownfish.png',
+            label: 'fish',
+            rotationOffset: 180,
+            behavior: 'swim',       // free wander inside its pitch zone
+        },
+        seaslug: {
+            radius: 20,
+            mass: 1.2,
+            baseSpeed: 0.5,
+            color: '#cc88dd',
+            stroke: '#884499',
+            icon: 'assets/sea urchin.png',
+            label: 'sea urchin',
+            rotationOffset: 90,
+            behavior: 'drift',      // very slow free drift
+        },
+        octopus: {
+            radius: 20,
+            mass: 1.5,
+            baseSpeed: 1.2,
+            color: '#ee7788',
+            stroke: '#aa3344',
+            icon: 'assets/octopus.png',
+            label: 'octopus',
+            rotationOffset: 90,
+            behavior: 'pulse',      // stop-and-burst
+        },
+        rock: {
+            radius: 20,
+            mass: 999,
+            baseSpeed: 0,
+            color: '#8899aa',
+            stroke: '#556677',
+            icon: 'assets/stone.png',
+            label: 'rock',
+            rotationOffset: 0,
+            behavior: 'static',     // immovable
+        },
+    };
+
+    /* ── State ──────────────────────────────────────────────── */
+    let creatures    = [];
+    let running      = false;
+    let CX = 0, CY  = 0;
+    let POOL_R       = 0;       // outer pool radius
+    let idCounter    = 0;
+
+    /* ── DOM ────────────────────────────────────────────────── */
+    const startBtn    = document.getElementById('startBtn');
+    const cleanBtn    = document.getElementById('cleanBtn');
+    const innerRadiusInput  = document.getElementById('innerRadius');
+    const middleRadiusInput = document.getElementById('middleRadius');
+    const instructionsBtn   = document.getElementById('instructionsBtn');
+    const instructionsModal = document.getElementById('instructionsModal');
+    const instructionsClose = document.getElementById('instructionsClose');
+    const dragGhostEl = document.getElementById('dragGhost');
+    const konvaEl     = document.getElementById('konvaContainer');
+
+    /* ── Konva ──────────────────────────────────────────────── */
+    let stage, bgLayer, fxLayer, creatureLayer;
+
+    function initKonva () {
+        const W = konvaEl.clientWidth;
+        const H = konvaEl.clientHeight;
+        CX = W / 2;
+        CY = H / 2;
+        POOL_R = Math.min(W, H) * 0.46;
+        updateRingRadii();
+
+        stage = new Konva.Stage({ container: 'konvaContainer', width: W, height: H });
+
+        bgLayer = new Konva.Layer();
+        stage.add(bgLayer);
+        drawPool();
+
+        fxLayer = new Konva.Layer();
+        stage.add(fxLayer);
+
+        creatureLayer = new Konva.Layer();
+        stage.add(creatureLayer);
+    }
+
+    function updateRingRadii () {
+        RING_RADII[0] = POOL_R * RING_RATIOS[0];
+        RING_RADII[1] = POOL_R * RING_RATIOS[1];
+        RING_RADII[2] = POOL_R;
+    }
+
+    function applyRingRangeControls () {
+        RING_RATIOS[0] = parseInt(innerRadiusInput.value, 10) / 100;
+        RING_RATIOS[1] = parseInt(middleRadiusInput.value, 10) / 100;
+        updateRingRadii();
+        drawPool();
+        creatures.forEach(constrainCreatureToHomeRing);
+    }
+
+    /* ── Pool drawing ───────────────────────────────────────── */
+    function drawPool () {
+        bgLayer.destroyChildren();
+
+        // Outer shadow
+        bgLayer.add(new Konva.Circle({
+            x: CX, y: CY,
+            radius: POOL_R + 8,
+            fill: 'transparent',
+            stroke: 'rgba(60,140,200,0.25)',
+            strokeWidth: 16,
+            listening: false,
+        }));
+
+        // Ring fills (outer to inner so inner paints on top)
+        for (let i = 2; i >= 0; i--) {
+            bgLayer.add(new Konva.Circle({
+                x: CX, y: CY,
+                radius: RING_RADII[i],
+                fill: RING_COLORS[i],
+                listening: false,
+            }));
+        }
+
+        // Ring border lines
+        for (let i = 0; i < 3; i++) {
+            bgLayer.add(new Konva.Circle({
+                x: CX, y: CY,
+                radius: RING_RADII[i],
+                fill: 'transparent',
+                stroke: 'rgba(255,255,255,0.9)',
+                strokeWidth: i === 2 ? 4 : 2.5,
+                listening: false,
+            }));
+        }
+
+        // Outer pool border (blue edge like mockup)
+        bgLayer.add(new Konva.Circle({
+            x: CX, y: CY,
+            radius: POOL_R,
+            fill: 'transparent',
+            stroke: '#5aace0',
+            strokeWidth: 3.5,
+            listening: false,
+        }));
+
+        // Ring labels
+        const ringNames = ['high pitch', 'mid pitch', 'low pitch'];
+        const labelR    = [RING_RADII[0] * 0.62, (RING_RADII[0] + RING_RADII[1]) / 2, (RING_RADII[1] + RING_RADII[2]) / 2];
+        for (let i = 0; i < 3; i++) {
+            bgLayer.add(new Konva.Text({
+                x: CX - 40,
+                y: CY - labelR[i] - 8,
+                width: 80,
+                text: ringNames[i],
+                fontSize: 13,
+                fontFamily: 'Nunito, sans-serif',
+                fontStyle: '600',
+                fill: 'rgba(80,140,180,0.55)',
+                align: 'center',
+                listening: false,
+            }));
+        }
+
+        bgLayer.batchDraw();
+    }
+
+    /* ── Determine which ring a position is in ─────────────── */
+    function getRingIdx (x, y) {
+        const d = Math.hypot(x - CX, y - CY);
+        if (d <= RING_RADII[0]) return 0;
+        if (d <= RING_RADII[1]) return 1;
+        return 2;
+    }
+
+    function getRingBounds (ringIdx, radius) {
+        return {
+            min: ringIdx === 0 ? 0 : RING_RADII[ringIdx - 1] + radius,
+            max: RING_RADII[ringIdx] - radius,
+        };
+    }
+
+    function updateHeadingFromVelocity (c) {
+        if (c.def.behavior === 'static') return;
+        if (Math.hypot(c.vx, c.vy) < 0.01) return;
+        c.heading = Math.atan2(c.vy, c.vx);
+    }
+
+    function alignVelocityToHeading (c, speed) {
+        c.vx = Math.cos(c.heading) * speed;
+        c.vy = Math.sin(c.heading) * speed;
+    }
+
+    function getVisualRotation (c) {
+        return c.heading * 180 / Math.PI + c.def.rotationOffset;
+    }
+
+    function applyCreatureVisualTransform (c) {
+        if (c.def.behavior === 'static') return;
+
+        if (c.type === 'fish') {
+            const headingDeg = c.heading * 180 / Math.PI;
+            const facingRight = Math.cos(c.heading) >= 0;
+            c.kGroup.rotation(facingRight ? headingDeg : headingDeg + 180);
+            if (c.kIcon) {
+                c.kIcon.scaleX(facingRight ? -1 : 1);
+                c.kIcon.scaleY(1);
+            }
+            return;
+        }
+
+        c.kGroup.rotation(getVisualRotation(c));
+        if (c.kIcon) {
+            c.kIcon.scaleX(1);
+            c.kIcon.scaleY(1);
         }
     }
 
-    fanToggleText.text(scanState.isPlaying ? "⏸" : "▶");
-    bgLayer.draw();
-    uiLayer.draw();
-}
+    function constrainCreatureToHomeRing (c) {
+        if (c.def.behavior === 'static') return;
 
-// Restart resets time and playback position without removing the current composition.
-// Clean goes further and removes all placed fish, returning the tool to an empty state.
-// Keeping these two reset behaviours separate supports different creative rhythms: one for replaying and checking, and one for starting over.
-function restartSequencer() {
-    scanState.isPlaying = false;
-    scanState.currentCol = 0;
-    scanState.accumulatedTime = 0;
-    fanToggleText.text("▶");
+        const ringIdx = c.homeRing ?? getRingIdx(c.x, c.y);
+        const bounds = getRingBounds(ringIdx, c.radius);
+        let dx = c.x - CX;
+        let dy = c.y - CY;
+        let d = Math.hypot(dx, dy);
 
-    scanHighlight.visible(false);
-    scanHighlight.x(grid.x);
-
-    bgLayer.draw();
-    uiLayer.draw();
-}
-
-function cleanSequencer() {
-    restartSequencer();
-
-    placedNotes.forEach((note) => {
-        if (note.node) {
-            note.node.destroy();
+        if (d < 0.001) {
+            const a = Math.random() * Math.PI * 2;
+            dx = Math.cos(a);
+            dy = Math.sin(a);
+            d = 1;
         }
+
+        const nx = dx / d;
+        const ny = dy / d;
+
+        if (d > bounds.max) {
+            c.x = CX + nx * bounds.max;
+            c.y = CY + ny * bounds.max;
+            const dot = c.vx * nx + c.vy * ny;
+            if (dot > 0) {
+                c.vx -= 2 * dot * nx;
+                c.vy -= 2 * dot * ny;
+                updateHeadingFromVelocity(c);
+                playBoundarySound(c, Math.abs(dot));
+            }
+        } else if (d < bounds.min) {
+            c.x = CX + nx * bounds.min;
+            c.y = CY + ny * bounds.min;
+            const dot = c.vx * nx + c.vy * ny;
+            if (dot < 0) {
+                c.vx -= 2 * dot * nx;
+                c.vy -= 2 * dot * ny;
+                updateHeadingFromVelocity(c);
+                playBoundarySound(c, Math.abs(dot));
+            }
+        }
+    }
+
+    function playBoundarySound (c, impact) {
+        if (impact <= 0.12 || c.cooldown !== 0) return;
+        const vel = Math.max(0.18, Math.min(impact / 4, 1));
+        const ring = c.homeRing ?? getRingIdx(c.x, c.y);
+        playMarimba(null, ring, vel * 0.65);
+        spawnRipple(c.x, c.y, c.radius, '#ffffff');
+        c.cooldown = 10;
+    }
+
+    /* ── Creature factory ───────────────────────────────────── */
+    function spawnCreature (type, x, y) {
+        const def = CREATURE_DEFS[type];
+        const homeRing = getRingIdx(x, y);
+
+        // Random initial velocity (zero for rock)
+        const angle = Math.random() * Math.PI * 2;
+        const spd   = def.baseSpeed * (0.7 + Math.random() * 0.6);
+        const c = {
+            id:     idCounter++,
+            type,
+            x, y,
+            vx: def.behavior === 'static' ? 0 : Math.cos(angle) * spd,
+            vy: def.behavior === 'static' ? 0 : Math.sin(angle) * spd,
+            heading: angle,
+            radius: def.radius,
+            mass:   def.mass,
+            def,
+            homeRing,
+            // behavior state
+            pulseTimer:  0,   // for octopus
+            pulsePhase:  'wait',
+            cooldown:    0,
+            removed:     false,
+            // Konva
+            kGroup: null,
+        };
+
+        buildKonvaCreature(c);
+        creatures.push(c);
+        return c;
+    }
+
+    function buildKonvaCreature (c) {
+        const def   = c.def;
+        const group = new Konva.Group({ x: c.x, y: c.y, listening: true });
+
+        const iconSize = c.radius * 2.75;
+        const iconImage = new Image();
+        iconImage.onload = () => {
+            if (c.removed) return;
+            const icon = new Konva.Image({
+                x: 0,
+                y: 0,
+                offsetX: iconSize / 2,
+                offsetY: iconSize / 2,
+                width: iconSize,
+                height: iconSize,
+                image: iconImage,
+                listening: false,
+            });
+            group.add(icon);
+            c.kIcon = icon;
+            applyCreatureVisualTransform(c);
+            creatureLayer.batchDraw();
+        };
+        iconImage.src = def.icon;
+
+        const imageHitArea = new Konva.Circle({
+            radius: c.radius,
+            fill: 'transparent',
+            listening: true,
+        });
+        group.add(imageHitArea);
+
+        // Click to remove
+        group.on('click tap', () => {
+            removeCreature(c);
+        });
+
+        creatureLayer.add(group);
+        c.kGroup = group;
+        c.kBody  = null;
+        c.kGlow  = null;
+        creatureLayer.batchDraw();
+    }
+
+    function removeCreature (c) {
+        spawnRipple(c.x, c.y, c.radius * 2, c.def.color);
+        c.removed = true;
+        c.kGroup.destroy();
+        creatures = creatures.filter(x => x.id !== c.id);
+        creatureLayer.batchDraw();
+    }
+
+    /* ── Physics ────────────────────────────────────────────── */
+    const DAMPING = 0.992;
+
+    function physicsStep () {
+        for (const c of creatures) {
+            if (c.cooldown > 0) c.cooldown--;
+            if (c.def.behavior === 'static') continue;
+
+            /* Behavior-specific */
+            if (c.type === 'seaslug') {
+                // Very slow — keep speed capped low
+                const sp = Math.hypot(c.vx, c.vy);
+                const maxSp = 1.2;
+                if (sp > maxSp) { c.vx *= maxSp / sp; c.vy *= maxSp / sp; }
+                if (sp < 0.1) {
+                    alignVelocityToHeading(c, c.def.baseSpeed);
+                }
+            }
+
+            if (c.type === 'octopus') {
+                c.pulseTimer--;
+                if (c.pulseTimer <= 0) {
+                    if (c.pulsePhase === 'wait') {
+                        // Burst forward in the current heading.
+                        const sp = c.def.baseSpeed * (2.5 + Math.random() * 1.5);
+                        alignVelocityToHeading(c, sp);
+                        c.pulsePhase = 'burst';
+                        c.pulseTimer = 18 + Math.floor(Math.random() * 12); // burst duration
+                    } else {
+                        // Stop: damp velocity hard
+                        c.vx *= 0.15;
+                        c.vy *= 0.15;
+                        c.pulsePhase = 'wait';
+                        c.pulseTimer = 50 + Math.floor(Math.random() * 60); // wait duration
+                    }
+                }
+            }
+
+            if (c.type === 'fish') {
+                // Cap speed
+                const sp = Math.hypot(c.vx, c.vy);
+                const maxSp = c.def.baseSpeed * 3;
+                if (sp > maxSp) { c.vx *= maxSp / sp; c.vy *= maxSp / sp; }
+                // Min speed
+                if (sp < c.def.baseSpeed * 0.4 && sp > 0.001) {
+                    c.vx *= (c.def.baseSpeed * 0.4) / sp;
+                    c.vy *= (c.def.baseSpeed * 0.4) / sp;
+                }
+            }
+
+            c.vx *= DAMPING;
+            c.vy *= DAMPING;
+            c.x  += c.vx;
+            c.y  += c.vy;
+            constrainCreatureToHomeRing(c);
+        }
+
+        /* Creature–creature collisions */
+        for (let i = 0; i < creatures.length; i++) {
+            for (let j = i + 1; j < creatures.length; j++) {
+                const a = creatures[i];
+                const b = creatures[j];
+                if (a.cooldown > 0 && b.cooldown > 0) continue;
+
+                const dx   = b.x - a.x;
+                const dy   = b.y - a.y;
+                const dist = Math.hypot(dx, dy);
+                const minD = a.radius + b.radius;
+
+                if (dist < minD && dist > 0.01) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    const ov = (minD - dist) / 2;
+
+                    /* Separate — rocks don't move */
+                    if (a.def.behavior !== 'static') { a.x -= nx * ov; a.y -= ny * ov; }
+                    if (b.def.behavior !== 'static') { b.x += nx * ov; b.y += ny * ov; }
+
+                    /* Elastic response */
+                    const relVx = a.vx - b.vx;
+                    const relVy = a.vy - b.vy;
+                    const relDot = relVx * nx + relVy * ny;
+
+                    if (relDot > 0) {
+                        const impulse = (2 * relDot) / (a.mass + b.mass);
+                        if (a.def.behavior !== 'static') {
+                            a.vx -= impulse * b.mass * nx;
+                            a.vy -= impulse * b.mass * ny;
+                            updateHeadingFromVelocity(a);
+                        }
+                        if (b.def.behavior !== 'static') {
+                            b.vx += impulse * a.mass * nx;
+                            b.vy += impulse * a.mass * ny;
+                            updateHeadingFromVelocity(b);
+                        }
+
+                        /* Sound */
+                        const impactSpd = Math.abs(relDot);
+                        const canSound = a.cooldown === 0 || b.cooldown === 0;
+                        if (canSound) {
+                            const vel = Math.max(0.16, Math.min(impactSpd / 5, 1));
+                            // Use the ring of whichever moving creature
+                            const mover = a.def.behavior !== 'static' ? a : b;
+                            const ring  = mover.homeRing ?? getRingIdx(mover.x, mover.y);
+                            // Note choice: pick a note from collision pair
+                            const notePool = RING_NOTES[ring];
+                            const note = notePool[Math.floor(Math.random() * notePool.length)];
+                            playMarimba(note, ring, vel);
+
+                            const mx = (a.x + b.x) / 2;
+                            const my = (a.y + b.y) / 2;
+                            spawnRipple(mx, my, (a.radius + b.radius) * 0.6, '#cce8ff');
+                            flashCreature(a);
+                            flashCreature(b);
+
+                            a.cooldown = 10;
+                            b.cooldown = 10;
+                        }
+                    }
+                }
+            }
+        }
+
+        for (const c of creatures) {
+            constrainCreatureToHomeRing(c);
+        }
+    }
+
+    /* ── Visual FX ──────────────────────────────────────────── */
+    function spawnRipple (x, y, r, color) {
+        const c = new Konva.Circle({
+            x, y, radius: r,
+            fill: 'transparent',
+            stroke: color,
+            strokeWidth: 2.5,
+            opacity: 0.75,
+            listening: false,
+        });
+        fxLayer.add(c);
+        c.to({
+            radius: r + 40,
+            opacity: 0,
+            strokeWidth: 0.5,
+            duration: 0.65,
+            easing: Konva.Easings.EaseOut,
+            onFinish: () => c.destroy(),
+        });
+    }
+
+    function flashCreature (c) {
+        const target = c.kIcon || c.kGlow;
+        if (!target) return;
+        target.to({ opacity: 0.45, duration: 0.05,
+            onFinish: () => target.to({ opacity: 1, duration: 0.2 }) });
+    }
+
+    /* ── Controls wiring ────────────────────────────────────── */
+    innerRadiusInput.addEventListener('input', applyRingRangeControls);
+    middleRadiusInput.addEventListener('input', applyRingRangeControls);
+
+    function openInstructions () {
+        instructionsBtn.classList.add('pop');
+        setTimeout(() => instructionsBtn.classList.remove('pop'), 160);
+        instructionsModal.classList.add('visible');
+        instructionsModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeInstructions () {
+        instructionsModal.classList.remove('visible');
+        instructionsModal.setAttribute('aria-hidden', 'true');
+    }
+
+    instructionsBtn.addEventListener('click', openInstructions);
+    instructionsClose.addEventListener('click', closeInstructions);
+    instructionsModal.addEventListener('click', e => {
+        if (e.target === instructionsModal) closeInstructions();
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeInstructions();
     });
 
-    placedNotes.length = 0;
-    noteLayer.draw();
-}
+    /* Start / stop */
+    startBtn.addEventListener('click', async () => {
+        await startAudio();
+        running = !running;
+        startBtn.textContent = running ? 'stop' : 'start';
+        startBtn.classList.toggle('running', running);
+    });
 
-// Helper: Maps slider position to speed (Slow -> Fast)
-function updateSpeedFromSlider() {
-    const minX = 55;
-    const maxX = 175;
-    const t = (sliderThumb.x() - minX) / (maxX - minX)
-    scanState.speed = 0.4 + t * 1.8;
-}
+    /* Clean */
+    cleanBtn.addEventListener('click', () => {
+        [...creatures].forEach(c => {
+            c.kGroup.destroy();
+        });
+        creatures = [];
+        creatureLayer.batchDraw();
+    });
 
-// Global Animation Loop: Handles visual updates and sequencer timing.
-const appAnimation = new Konva.Animation(function (frame) {
-    if (!frame) return;
+    /* ── Pointer drag & drop ────────────────────────────────── */
+    let dragType = null;
+    let activeDragCard = null;
 
-    const delta = frame.timeDiff;
-
-    // Accumulate time during playback
-    if (scanState.isPlaying) {
-        scanState.accumulatedTime += delta;
-
-        const currentInterval = scanState.stepInterval / scanState.speed;
-
-        if (scanState.accumulatedTime >= currentInterval) {
-            scanState.accumulatedTime = 0;
-            advanceScan();
-        }
-
-        // Fan blades rotate
-        fanBladeGroup.rotation(fanBladeGroup.rotation() + 6 * scanState.speed);
+    function showDragGhost (type, x, y) {
+        dragGhostEl.replaceChildren();
+        const ghostImg = document.createElement('img');
+        ghostImg.src = CREATURE_DEFS[type].icon;
+        ghostImg.alt = CREATURE_DEFS[type].label;
+        dragGhostEl.appendChild(ghostImg);
+        dragGhostEl.style.left = x + 'px';
+        dragGhostEl.style.top = y + 'px';
+        dragGhostEl.className = 'drag-ghost visible';
     }
 
-    uiLayer.batchDraw();
-}, stage);
+    function hideDragGhost () {
+        dragGhostEl.classList.remove('visible');
+        dragGhostEl.replaceChildren();
+    }
 
-appAnimation.start();
+    function dropCreatureAt (clientX, clientY) {
+        if (!dragType) return;
+
+        const rect = konvaEl.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        const def = CREATURE_DEFS[dragType];
+
+        if (
+            clientX < rect.left ||
+            clientX > rect.right ||
+            clientY < rect.top ||
+            clientY > rect.bottom ||
+            Math.hypot(x - CX, y - CY) > POOL_R - def.radius - 2 ||
+            creatures.length >= 14
+        ) {
+            return;
+        }
+
+        const c = spawnCreature(dragType, x, y);
+        spawnRipple(x, y, def.radius * 1.5, def.color);
+
+        if (dragType === 'octopus') {
+            c.pulsePhase = 'wait';
+            c.pulseTimer = 40 + Math.floor(Math.random() * 40);
+        }
+    }
+
+    document.querySelectorAll('.creature-card').forEach(card => {
+        card.addEventListener('dragstart', e => e.preventDefault());
+
+        card.addEventListener('pointerdown', e => {
+            if (e.button !== undefined && e.button !== 0) return;
+            dragType = card.dataset.type;
+            activeDragCard = card;
+            card.classList.add('dragging');
+            card.setPointerCapture(e.pointerId);
+            showDragGhost(dragType, e.clientX, e.clientY);
+            e.preventDefault();
+        });
+    });
+
+    document.addEventListener('pointermove', e => {
+        if (!dragType) return;
+        dragGhostEl.style.left = e.clientX + 'px';
+        dragGhostEl.style.top  = e.clientY + 'px';
+    });
+
+    document.addEventListener('pointerup', e => {
+        if (!dragType) return;
+        dropCreatureAt(e.clientX, e.clientY);
+        if (activeDragCard) {
+            activeDragCard.classList.remove('dragging');
+        }
+        hideDragGhost();
+        activeDragCard = null;
+        dragType = null;
+    });
+
+    document.addEventListener('pointercancel', () => {
+        if (activeDragCard) {
+            activeDragCard.classList.remove('dragging');
+        }
+        hideDragGhost();
+        activeDragCard = null;
+        dragType = null;
+    });
+
+    /* ── Resize ─────────────────────────────────────────────── */
+    window.addEventListener('resize', () => {
+        requestAnimationFrame(() => {
+            if (!stage) return;
+            const W = konvaEl.clientWidth;
+            const H = konvaEl.clientHeight;
+            CX = W / 2; CY = H / 2;
+            POOL_R = Math.min(W, H) * 0.46;
+            updateRingRadii();
+            stage.width(W); stage.height(H);
+            drawPool();
+            creatures.forEach(constrainCreatureToHomeRing);
+        });
+    });
+
+    /* ── Main render loop (extended) ────────────────────────── */
+    function mainLoop () {
+        if (running) physicsStep();
+
+        /* Sync creature positions */
+        for (const c of creatures) {
+            c.kGroup.x(c.x);
+            c.kGroup.y(c.y);
+            if (c.def.behavior !== 'static') {
+                applyCreatureVisualTransform(c);
+            }
+        }
+
+        creatureLayer.batchDraw();
+        bgLayer.batchDraw();
+        fxLayer.batchDraw();
+
+        requestAnimationFrame(mainLoop);
+    }
+
+    /* ── Init ───────────────────────────────────────────────── */
+    function init () {
+        initKonva();
+        mainLoop();
+    }
+
+    init();
+
+})();
